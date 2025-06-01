@@ -1,46 +1,68 @@
 {
-  "name": "blc_frontend",
+  "name": "baseball-chat-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "lint:fix": "vue-cli-service lint --fix",
+    "format": "prettier --write \"src/**/*.{js,vue,json,css,scss,md}\""
   },
   "dependencies": {
-    "@vueuse/core": "^13.3.0",
-    "axios": "^1.9.0",
-    "core-js": "^3.8.3",
-    "pinia": "^3.0.2",
-    "socket.io-client": "^4.8.1",
-    "vue": "^3.2.13",
-    "vue-router": "^4.5.1"
+    "vue": "^3.3.0",
+    "vue-router": "^4.2.0",
+    "pinia": "^2.1.0",
+    "axios": "^1.4.0",
+    "socket.io-client": "^4.7.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.12.16",
-    "@babel/eslint-parser": "^7.12.16",
-    "@vue/cli-plugin-babel": "~5.0.0",
     "@vue/cli-plugin-eslint": "~5.0.0",
+    "@vue/cli-plugin-router": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
-    "autoprefixer": "^10.4.21",
-    "eslint": "^7.32.0",
-    "eslint-plugin-vue": "^8.0.3",
-    "postcss": "^8.5.4",
-    "tailwindcss": "^4.1.8"
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "eslint": "^8.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-vue": "^9.0.0",
+    "prettier": "^3.0.0"
   },
   "eslintConfig": {
     "root": true,
     "env": {
-      "node": true
+      "node": true,
+      "browser": true,
+      "es2021": true
     },
     "extends": [
       "plugin:vue/vue3-essential",
-      "eslint:recommended"
+      "eslint:recommended",
+      "@vue/eslint-config-prettier"
     ],
     "parserOptions": {
-      "parser": "@babel/eslint-parser"
+      "ecmaVersion": 2021,
+      "sourceType": "module"
     },
-    "rules": {}
+    "rules": {
+      "no-console": "off",
+      "no-debugger": "off",
+      "vue/multi-word-component-names": "off",
+      "prettier/prettier": [
+        "error",
+        {
+          "endOfLine": "auto"
+        }
+      ]
+    }
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "printWidth": 80,
+    "bracketSpacing": true,
+    "arrowParens": "avoid",
+    "endOfLine": "auto"
   },
   "browserslist": [
     "> 1%",
