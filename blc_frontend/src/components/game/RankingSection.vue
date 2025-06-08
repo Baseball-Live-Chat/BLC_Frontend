@@ -2,11 +2,7 @@
   <div class="ranking-section">
     <h2 class="ranking-title">🏆 인기 순위</h2>
     <div class="ranking-list">
-      <div 
-        v-for="ranking in rankings" 
-        :key="ranking.rank"
-        class="ranking-item"
-      >
+      <div v-for="ranking in rankings" :key="ranking.rank" class="ranking-item">
         <div class="ranking-number">{{ ranking.rank }}</div>
         <div class="team-name">{{ ranking.teams }}</div>
         <div class="match-count">실시간 {{ ranking.viewers }}명</div>
@@ -19,8 +15,8 @@
 defineProps({
   rankings: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 })
 </script>
 
@@ -30,7 +26,7 @@ defineProps({
   padding: 20px;
   border-radius: 10px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .ranking-title {
@@ -85,7 +81,7 @@ defineProps({
   .ranking-list {
     flex-direction: column;
   }
-  
+
   .ranking-item {
     min-width: auto;
   }

@@ -12,13 +12,13 @@ import { computed } from 'vue'
 const props = defineProps({
   message: {
     type: Object,
-    required: true
-  }
+    required: true,
+  },
 })
 
-const formatTime = (timestamp) => {
+const formatTime = timestamp => {
   if (!timestamp) return ''
-  
+
   const date = new Date(timestamp)
   const hours = date.getHours().toString().padStart(2, '0')
   const minutes = date.getMinutes().toString().padStart(2, '0')
@@ -33,7 +33,7 @@ const formatTime = (timestamp) => {
   background: white;
   border-radius: 8px;
   border-left: 3px solid #2c5aa0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   animation: slideInRight 0.3s ease-out;
 }
 
@@ -74,7 +74,7 @@ const formatTime = (timestamp) => {
     padding: 8px;
     margin-bottom: 10px;
   }
-  
+
   .chat-text {
     font-size: 0.85rem;
   }

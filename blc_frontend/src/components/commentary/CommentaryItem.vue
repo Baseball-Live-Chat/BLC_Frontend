@@ -9,8 +9,8 @@
 defineProps({
   commentary: {
     type: Object,
-    required: true
-  }
+    required: true,
+  },
 })
 </script>
 
@@ -21,7 +21,7 @@ defineProps({
   background: white;
   border-radius: 8px;
   border-left: 4px solid #2c5aa0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   animation: slideIn 0.3s ease-out;
 }
 
@@ -54,7 +54,7 @@ defineProps({
     padding: 10px;
     margin-bottom: 12px;
   }
-  
+
   .commentary-text {
     font-size: 0.85rem;
   }

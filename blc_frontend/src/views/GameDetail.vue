@@ -1,15 +1,11 @@
 <template>
   <div class="container">
     <button class="back-button" @click="goBack">← 메인으로 돌아가기</button>
-    
-    <div v-if="loading" class="loading">
-      경기 정보를 불러오는 중...
-    </div>
-    
-    <div v-else-if="!game" class="error">
-      경기 정보를 찾을 수 없습니다.
-    </div>
-    
+
+    <div v-if="loading" class="loading">경기 정보를 불러오는 중...</div>
+
+    <div v-else-if="!game" class="error">경기 정보를 찾을 수 없습니다.</div>
+
     <div v-else>
       <div class="detail-header">
         <div class="detail-teams">
@@ -26,15 +22,12 @@
           </div>
         </div>
         <div class="game-info">
-          {{ game.inning }} • {{ game.stadium }} • {{ game.startTime }} • 
+          {{ game.inning }} • {{ game.stadium }} • {{ game.startTime }} •
           <GameStatus :status="game.status" class="inline-status" />
         </div>
       </div>
 
-      <CheeringSection 
-        :game="game"
-        @cheer="handleCheer"
-      />
+      <!-- <CheeringSection :game="game" @cheer="handleCheer" /> -->
 
       <div class="detail-content">
         <LiveCommentary :gameId="gameId" />
@@ -67,7 +60,7 @@ const goBack = () => {
   router.push('/')
 }
 
-const handleCheer = (team) => {
+const handleCheer = team => {
   gameStore.cheerForTeam(gameId.value, team)
 }
 
@@ -125,7 +118,7 @@ onUnmounted(() => {
   padding: 30px;
   border-radius: 10px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .detail-teams {
@@ -152,7 +145,7 @@ onUnmounted(() => {
   color: white;
   font-weight: bold;
   font-size: 1.4rem;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .team-name {
@@ -200,37 +193,37 @@ onUnmounted(() => {
   .container {
     padding: 10px;
   }
-  
+
   .detail-header {
     padding: 20px;
   }
-  
+
   .detail-teams {
     flex-direction: column;
     gap: 20px;
   }
-  
+
   .detail-team-logo {
     width: 60px;
     height: 60px;
     font-size: 1.2rem;
   }
-  
+
   .detail-score {
     font-size: 2.5rem;
   }
-  
+
   .detail-vs {
     font-size: 1.5rem;
     margin: 10px 0;
   }
-  
+
   .game-info {
     font-size: 1rem;
     flex-direction: column;
     gap: 5px;
   }
-  
+
   .detail-content {
     grid-template-columns: 1fr;
   }

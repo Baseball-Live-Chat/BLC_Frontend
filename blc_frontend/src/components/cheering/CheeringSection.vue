@@ -2,19 +2,17 @@
   <div class="container">
     <!-- 인기 순위 섹션 -->
     <RankingSection :rankings="rankings" />
-    
+
     <!-- 경기 카드 섹션 -->
     <div class="games-section">
       <h2 class="games-title">🔥 진행 중인 경기</h2>
-      
-      <div v-if="loading" class="loading">
-        경기 정보를 불러오는 중...
-      </div>
-      
+
+      <div v-if="loading" class="loading">경기 정보를 불러오는 중...</div>
+
       <div v-else-if="error" class="error">
         {{ error }}
       </div>
-      
+
       <div v-else class="games-list">
         <GameCard
           v-for="game in games"
@@ -42,7 +40,7 @@ const rankings = computed(() => gameStore.getRankings)
 const loading = computed(() => gameStore.loading)
 const error = computed(() => gameStore.error)
 
-const goToGameDetail = (gameId) => {
+const goToGameDetail = gameId => {
   router.push(`/games/${gameId}`)
 }
 
@@ -63,7 +61,7 @@ onMounted(async () => {
   background: white;
   padding: 20px;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .games-title {
@@ -102,7 +100,7 @@ onMounted(async () => {
   .container {
     padding: 10px;
   }
-  
+
   .games-list {
     flex-direction: column;
   }

@@ -10,8 +10,8 @@ import { computed } from 'vue'
 const props = defineProps({
   status: {
     type: String,
-    required: true
-  }
+    required: true,
+  },
 })
 
 const statusClass = computed(() => {

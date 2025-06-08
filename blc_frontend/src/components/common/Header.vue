@@ -7,8 +7,7 @@
   </div>
 </template>
 
-<script setup>
-</script>
+<script setup></script>
 
 <style scoped>
 .header {
@@ -39,7 +38,7 @@
   .header h1 {
     font-size: 1.5rem;
   }
-  
+
   .header p {
     font-size: 1rem;
   }

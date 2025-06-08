@@ -1,7 +1,7 @@
 <template>
   <div class="game-card" @click="$emit('click')">
     <GameStatus :status="game.status" />
-    
+
     <div class="teams">
       <div class="team">
         <div class="team-logo">{{ game.homeTeam }}</div>
@@ -13,20 +13,24 @@
         <div class="score">{{ game.awayScore }}</div>
       </div>
     </div>
-    
+
     <div class="game-info">
       {{ game.inning }} • {{ game.stadium }} • {{ game.startTime }}
     </div>
-    
+
     <div class="cheering-info">
-      <div class="cheer-count">{{ game.homeTeam }} {{ game.homeCheerCount }}</div>
-      <div class="cheer-count">{{ game.awayTeam }} {{ game.awayCheerCount }}</div>
+      <div class="cheer-count">
+        {{ game.homeTeam }} {{ game.homeCheerCount }}
+      </div>
+      <div class="cheer-count">
+        {{ game.awayTeam }} {{ game.awayCheerCount }}
+      </div>
     </div>
-    
+
     <div class="chat-preview">
       <h4>💬 실시간 채팅</h4>
-      <div 
-        v-for="message in game.recentMessages" 
+      <div
+        v-for="message in game.recentMessages"
         :key="message.id"
         class="chat-message"
       >
@@ -42,8 +46,8 @@ import GameStatus from './GameStatus.vue'
 defineProps({
   game: {
     type: Object,
-    required: true
-  }
+    required: true,
+  },
 })
 
 defineEmits(['click'])

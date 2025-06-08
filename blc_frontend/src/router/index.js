@@ -6,19 +6,19 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: Home
+    component: Home,
   },
   {
     path: '/games/:gameId',
     name: 'GameDetail',
     component: GameDetail,
-    props: true
-  }
+    props: true,
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 })
 
 export default router

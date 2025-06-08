@@ -1,7 +1,7 @@
 <template>
   <div class="chat-section">
     <h3 class="chat-title">💬 실시간 채팅</h3>
-    
+
     <div class="chat-messages" ref="chatMessages">
       <ChatMessage
         v-for="message in messages"
@@ -9,7 +9,7 @@
         :message="message"
       />
     </div>
-    
+
     <ChatInput @send-message="handleSendMessage" />
   </div>
 </template>
@@ -23,8 +23,8 @@ import ChatInput from './ChatInput.vue'
 const props = defineProps({
   gameId: {
     type: [String, Number],
-    required: true
-  }
+    required: true,
+  },
 })
 
 const chatStore = useChatStore()
@@ -34,14 +34,18 @@ const messages = computed(() => chatStore.getMessages)
 const participants = computed(() => chatStore.getParticipants)
 
 // 새로운 메시지가 추가될 때마다 스크롤을 맨 아래로
-watch(messages, async () => {
-  await nextTick()
-  if (chatMessages.value) {
-    chatMessages.value.scrollTop = chatMessages.value.scrollHeight
-  }
-}, { deep: true })
+watch(
+  messages,
+  async () => {
+    await nextTick()
+    if (chatMessages.value) {
+      chatMessages.value.scrollTop = chatMessages.value.scrollHeight
+    }
+  },
+  { deep: true }
+)
 
-const handleSendMessage = (content) => {
+const handleSendMessage = content => {
   chatStore.sendMessage(content)
 }
 
@@ -59,7 +63,7 @@ onUnmounted(() => {
   background: white;
   padding: 20px;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   height: 100%;
   display: flex;
   flex-direction: column;

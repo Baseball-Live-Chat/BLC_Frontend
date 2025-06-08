@@ -6,15 +6,15 @@ export const useGameStore = defineStore('game', {
     currentGame: null,
     rankings: [],
     loading: false,
-    error: null
+    error: null,
   }),
-  
+
   getters: {
-    getTodayGames: (state) => state.games,
-    getCurrentGame: (state) => state.currentGame,
-    getRankings: (state) => state.rankings
+    getTodayGames: state => state.games,
+    getCurrentGame: state => state.currentGame,
+    getRankings: state => state.rankings,
   },
-  
+
   actions: {
     async fetchGames() {
       this.loading = true
@@ -23,7 +23,7 @@ export const useGameStore = defineStore('game', {
         // TODO: 실제 API 호출
         // const response = await gameService.getGames()
         // this.games = response.data
-        
+
         // 임시 데이터
         this.games = [
           {
@@ -44,8 +44,8 @@ export const useGameStore = defineStore('game', {
             recentMessages: [
               { id: 1, nickname: '⭐야구팬', content: '두산 화이팅!' },
               { id: 2, nickname: '🔥LG팬', content: '역전하자!' },
-              { id: 3, nickname: '⚾베이스볼', content: '좋은 경기네요' }
-            ]
+              { id: 3, nickname: '⚾베이스볼', content: '좋은 경기네요' },
+            ],
           },
           {
             id: 2,
@@ -65,8 +65,8 @@ export const useGameStore = defineStore('game', {
             recentMessages: [
               { id: 1, nickname: '🦁삼성팬', content: '대승이다!' },
               { id: 2, nickname: '🐅기아팬', content: '아직 안 끝났어' },
-              { id: 3, nickname: '⚾관전러', content: '삼성 타선 대폭발' }
-            ]
+              { id: 3, nickname: '⚾관전러', content: '삼성 타선 대폭발' },
+            ],
           },
           {
             id: 3,
@@ -86,8 +86,8 @@ export const useGameStore = defineStore('game', {
             recentMessages: [
               { id: 1, nickname: '🦐롯데팬', content: '팽팽한 경기' },
               { id: 2, nickname: '🐋NC팬', content: '동점 유지하자' },
-              { id: 3, nickname: '⚾야구매니아', content: '투수전이네' }
-            ]
+              { id: 3, nickname: '⚾야구매니아', content: '투수전이네' },
+            ],
           },
           {
             id: 4,
@@ -107,8 +107,8 @@ export const useGameStore = defineStore('game', {
             recentMessages: [
               { id: 1, nickname: '🦅한화팬', content: '아직 초반이야' },
               { id: 2, nickname: '📱KT팬', content: '홈경기 화이팅' },
-              { id: 3, nickname: '⚾팬', content: 'KT 선제점!' }
-            ]
+              { id: 3, nickname: '⚾팬', content: 'KT 선제점!' },
+            ],
           },
           {
             id: 5,
@@ -128,9 +128,9 @@ export const useGameStore = defineStore('game', {
             recentMessages: [
               { id: 1, nickname: '🛡️SSG팬', content: '추격해보자' },
               { id: 2, nickname: '🐻키움팬', content: '홈경기 승리!' },
-              { id: 3, nickname: '⚾관전자', content: '키움 리드 유지' }
-            ]
-          }
+              { id: 3, nickname: '⚾관전자', content: '키움 리드 유지' },
+            ],
+          },
         ]
       } catch (error) {
         this.error = error.message
@@ -138,14 +138,14 @@ export const useGameStore = defineStore('game', {
         this.loading = false
       }
     },
-    
+
     async fetchGameDetail(gameId) {
       this.loading = true
       try {
         // TODO: 실제 API 호출
         // const response = await gameService.getGameDetail(gameId)
         // this.currentGame = response.data
-        
+
         // 임시 데이터
         this.currentGame = this.games.find(game => game.id == gameId)
       } catch (error) {
@@ -154,31 +154,31 @@ export const useGameStore = defineStore('game', {
         this.loading = false
       }
     },
-    
+
     async fetchRankings() {
       try {
         // TODO: 실제 API 호출
         // const response = await gameService.getRankings()
         // this.rankings = response.data
-        
+
         // 임시 데이터
         this.rankings = [
           { rank: 1, teams: '두산 vs LG', viewers: 1247 },
           { rank: 2, teams: '삼성 vs 기아', viewers: 1156 },
           { rank: 3, teams: '롯데 vs NC', viewers: 892 },
           { rank: 4, teams: '한화 vs KT', viewers: 743 },
-          { rank: 5, teams: 'SSG vs 키움', viewers: 689 }
+          { rank: 5, teams: 'SSG vs 키움', viewers: 689 },
         ]
       } catch (error) {
         this.error = error.message
       }
     },
-    
+
     async cheerForTeam(gameId, team) {
       try {
         // TODO: 실제 API 호출
         // await gameService.cheer(gameId, team)
-        
+
         // 실시간 업데이트
         if (this.currentGame && this.currentGame.id == gameId) {
           if (team === 'home') {
@@ -187,7 +187,7 @@ export const useGameStore = defineStore('game', {
             this.currentGame.awayCheerCount++
           }
         }
-        
+
         // 메인 게임 리스트도 업데이트
         const gameIndex = this.games.findIndex(game => game.id == gameId)
         if (gameIndex !== -1) {
@@ -200,6 +200,6 @@ export const useGameStore = defineStore('game', {
       } catch (error) {
         console.error('응원 실패:', error)
       }
-    }
-  }
+    },
+  },
 })

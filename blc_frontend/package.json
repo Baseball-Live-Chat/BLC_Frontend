@@ -10,11 +10,11 @@
     "format": "prettier --write \"src/**/*.{js,vue,json,css,scss,md}\""
   },
   "dependencies": {
-    "vue": "^3.3.0",
-    "vue-router": "^4.2.0",
-    "pinia": "^2.1.0",
     "axios": "^1.4.0",
-    "socket.io-client": "^4.7.0"
+    "pinia": "^2.1.0",
+    "socket.io-client": "^4.7.0",
+    "vue": "^3.3.0",
+    "vue-router": "^4.2.0"
   },
   "devDependencies": {
     "@vue/cli-plugin-eslint": "~5.0.0",
@@ -46,6 +46,7 @@
       "no-console": "off",
       "no-debugger": "off",
       "vue/multi-word-component-names": "off",
+      "no-unused-vars": "off",
       "prettier/prettier": [
         "error",
         {

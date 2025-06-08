@@ -1,12 +1,10 @@
 <template>
   <div class="live-commentary">
     <h3 class="commentary-title">📝 실시간 문자중계</h3>
-    
+
     <div class="commentary-feed" ref="commentaryFeed">
-      <div v-if="loading" class="loading">
-        문자중계를 불러오는 중...
-      </div>
-      
+      <div v-if="loading" class="loading">문자중계를 불러오는 중...</div>
+
       <div v-else>
         <CommentaryItem
           v-for="commentary in commentaries"
@@ -26,8 +24,8 @@ import CommentaryItem from './CommentaryItem.vue'
 const props = defineProps({
   gameId: {
     type: [String, Number],
-    required: true
-  }
+    required: true,
+  },
 })
 
 const commentaryStore = useCommentaryStore()
@@ -37,12 +35,16 @@ const commentaries = computed(() => commentaryStore.getCommentaries)
 const loading = computed(() => commentaryStore.loading)
 
 // 새로운 중계가 추가될 때마다 스크롤을 맨 위로
-watch(commentaries, async () => {
-  await nextTick()
-  if (commentaryFeed.value) {
-    commentaryFeed.value.scrollTop = 0
-  }
-}, { deep: true })
+watch(
+  commentaries,
+  async () => {
+    await nextTick()
+    if (commentaryFeed.value) {
+      commentaryFeed.value.scrollTop = 0
+    }
+  },
+  { deep: true }
+)
 
 onMounted(async () => {
   await commentaryStore.fetchCommentaries(props.gameId)
@@ -58,7 +60,7 @@ onUnmounted(() => {
   background: white;
   padding: 20px;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   height: 100%;
 }
 
