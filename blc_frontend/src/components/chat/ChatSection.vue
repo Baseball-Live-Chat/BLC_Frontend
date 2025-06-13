@@ -1,115 +1,111 @@
 <template>
-  <div class="chat-section">
-    <h3 class="chat-title">💬 실시간 채팅</h3>
-
-    <div class="chat-messages" ref="chatMessages">
-      <ChatMessage
-        v-for="message in messages"
-        :key="message.id"
-        :message="message"
-      />
+  <div class="chat-message" :class="{ 'my-message': isMyMessage }">
+    <div class="message-header">
+      <span class="nickname" :style="{ color: teamColor }">{{
+        message.nickname
+      }}</span>
+      <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
     </div>
-
-    <ChatInput @send-message="handleSendMessage" />
+    <div class="message-content" :style="{ borderLeftColor: teamColor }">
+      {{ message.content }}
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
-import { useChatStore } from '../../stores/chat'
-import ChatMessage from './ChatMessage.vue'
-import ChatInput from './ChatInput.vue'
+import { computed } from 'vue'
 
 const props = defineProps({
-  gameId: {
-    type: [String, Number],
+  message: {
+    type: Object,
     required: true,
   },
-})
-
-const chatStore = useChatStore()
-const chatMessages = ref(null)
-
-const messages = computed(() => chatStore.getMessages)
-const participants = computed(() => chatStore.getParticipants)
-
-// 새로운 메시지가 추가될 때마다 스크롤을 맨 아래로
-watch(
-  messages,
-  async () => {
-    await nextTick()
-    if (chatMessages.value) {
-      chatMessages.value.scrollTop = chatMessages.value.scrollHeight
-    }
+  teamColor: {
+    type: String,
+    default: '#666666',
   },
-  { deep: true }
-)
+})
 
-const handleSendMessage = content => {
-  chatStore.sendMessage(content)
+const isMyMessage = computed(() => {
+  return props.message.nickname === '👤나'
+})
+
+const formatTime = timestamp => {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }
-
-onMounted(() => {
-  chatStore.connectToGame(props.gameId)
-})
-
-onUnmounted(() => {
-  chatStore.disconnect()
-})
 </script>
 
 <style scoped>
-.chat-section {
+.chat-message {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
   background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  height: 100%;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+}
+
+.chat-message:hover {
+  background: #f8f9fa;
+  transform: translateY(-1px);
+}
+
+.chat-message.my-message {
+  background: #e3f2fd;
+  border-color: #bbdefb;
+}
+
+.chat-message.my-message:hover {
+  background: #e1f5fe;
+}
+
+.message-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
 }
 
-.chat-title {
-  font-size: 1.3rem;
-  margin-bottom: 15px;
-  color: #2c5aa0;
-  border-bottom: 2px solid #2c5aa0;
-  padding-bottom: 10px;
+.nickname {
+  font-weight: bold;
+  font-size: 0.85rem;
 }
 
-.chat-messages {
-  height: 350px;
-  overflow-y: auto;
-  border: 1px solid #e9ecef;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 15px;
-  flex: 1;
-  background: #fafafa;
+.timestamp {
+  font-size: 0.75rem;
+  color: #999;
 }
 
-/* 스크롤바 스타일링 */
-.chat-messages::-webkit-scrollbar {
-  width: 6px;
+.message-content {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #333;
+  padding-left: 8px;
+  border-left: 3px solid #ddd;
+  word-wrap: break-word;
 }
 
-.chat-messages::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+.my-message .message-content {
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
-  .chat-messages {
-    height: 250px;
+  .chat-message {
+    padding: 6px 10px;
+    margin-bottom: 8px;
+  }
+
+  .nickname {
+    font-size: 0.8rem;
+  }
+
+  .message-content {
+    font-size: 0.85rem;
   }
 }
 </style>

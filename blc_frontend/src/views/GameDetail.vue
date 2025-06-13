@@ -10,28 +10,43 @@
       <div class="detail-header">
         <div class="detail-teams">
           <div class="detail-team">
-            <div class="detail-team-logo">{{ game.homeTeam }}</div>
+            <div class="detail-team-logo">
+              <img
+                :src="homeTeamInfo.image"
+                :alt="homeTeamInfo.name"
+                class="team-image"
+              />
+            </div>
             <div class="team-name">{{ game.homeTeamName }}</div>
             <div class="detail-score">{{ game.homeScore }}</div>
           </div>
           <div class="detail-vs">VS</div>
           <div class="detail-team">
-            <div class="detail-team-logo">{{ game.awayTeam }}</div>
+            <div class="detail-team-logo">
+              <img
+                :src="awayTeamInfo.image"
+                :alt="awayTeamInfo.name"
+                class="team-image"
+              />
+            </div>
             <div class="team-name">{{ game.awayTeamName }}</div>
             <div class="detail-score">{{ game.awayScore }}</div>
           </div>
         </div>
         <div class="game-info">
           {{ game.inning }} • {{ game.stadium }} • {{ game.startTime }} •
-          <GameStatus :status="game.status" class="inline-status" />
+          <span class="game-status">{{ getStatusText(game.status) }}</span>
         </div>
       </div>
 
-      <!-- <CheeringSection :game="game" @cheer="handleCheer" /> -->
-
-      <div class="detail-content">
+      <!-- 문자중계 (상단) -->
+      <!-- <div class="commentary-section">
         <LiveCommentary :gameId="gameId" />
-        <ChatSection :gameId="gameId" />
+      </div> -->
+
+      <!-- 팀별 채팅 (하단 전체 너비) -->
+      <div class="chat-section-full">
+        <TeamChatSection :gameId="gameId" :game="game" />
       </div>
     </div>
   </div>
@@ -42,10 +57,9 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../stores/game'
 import { useChatStore } from '../stores/chat'
-import GameStatus from '../components/game/GameStatus.vue'
-import CheeringSection from '../components/cheering/CheeringSection.vue'
+import { getTeamInfo } from '../utils/teamUtils'
 import LiveCommentary from '../components/commentary/LiveCommentary.vue'
-import ChatSection from '../components/chat/ChatSection.vue'
+import TeamChatSection from '../components/chat/TeamChatSection.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -56,12 +70,21 @@ const gameId = computed(() => route.params.gameId)
 const game = computed(() => gameStore.currentGame)
 const loading = computed(() => gameStore.loading)
 
-const goBack = () => {
-  router.push('/')
+const homeTeamInfo = computed(() => getTeamInfo(game.value?.homeTeam))
+const awayTeamInfo = computed(() => getTeamInfo(game.value?.awayTeam))
+
+const getStatusText = status => {
+  const statusMap = {
+    LIVE: '🔴 LIVE',
+    ENDED: '⚫ 경기종료',
+    SCHEDULED: '⏰ 경기예정',
+    DELAYED: '⏸️ 경기지연',
+  }
+  return statusMap[status] || status
 }
 
-const handleCheer = team => {
-  gameStore.cheerForTeam(gameId.value, team)
+const goBack = () => {
+  router.push('/')
 }
 
 onMounted(async () => {
@@ -75,7 +98,7 @@ onUnmounted(() => {
 
 <style scoped>
 .container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
 }
@@ -136,16 +159,21 @@ onUnmounted(() => {
 .detail-team-logo {
   width: 80px;
   height: 80px;
-  background: #2c5aa0;
   border-radius: 50%;
   margin: 0 auto 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 1.4rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: #f8f9fa;
+  border: 3px solid #e9ecef;
+  overflow: hidden;
+}
+
+.team-image {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .team-name {
@@ -178,15 +206,22 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-.inline-status {
-  position: static;
-  margin: 0;
+.game-status {
+  font-weight: bold;
+  color: #2c5aa0;
 }
 
-.detail-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+.commentary-section {
+  margin-bottom: 20px;
+}
+
+.chat-section-full {
+  margin-bottom: 20px;
+}
+
+/* 팀별 채팅이 전체 너비를 차지하도록 */
+.chat-section-full :deep(.team-chat-section) {
+  min-height: 600px;
 }
 
 @media (max-width: 768px) {
@@ -206,7 +241,11 @@ onUnmounted(() => {
   .detail-team-logo {
     width: 60px;
     height: 60px;
-    font-size: 1.2rem;
+  }
+
+  .team-image {
+    width: 50px;
+    height: 50px;
   }
 
   .detail-score {
@@ -224,8 +263,8 @@ onUnmounted(() => {
     gap: 5px;
   }
 
-  .detail-content {
-    grid-template-columns: 1fr;
+  .chat-section-full :deep(.team-chat-section) {
+    min-height: 500px;
   }
 }
 </style>

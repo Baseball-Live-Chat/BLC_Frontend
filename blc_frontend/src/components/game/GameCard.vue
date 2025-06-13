@@ -4,12 +4,26 @@
 
     <div class="teams">
       <div class="team">
-        <div class="team-logo">{{ game.homeTeam }}</div>
+        <div class="team-logo">
+          <img
+            :src="homeTeamInfo.image"
+            :alt="homeTeamInfo.name"
+            class="team-image"
+          />
+        </div>
+        <div class="team-name">{{ game.homeTeam }}</div>
         <div class="score">{{ game.homeScore }}</div>
       </div>
       <div class="vs">VS</div>
       <div class="team">
-        <div class="team-logo">{{ game.awayTeam }}</div>
+        <div class="team-logo">
+          <img
+            :src="awayTeamInfo.image"
+            :alt="awayTeamInfo.name"
+            class="team-image"
+          />
+        </div>
+        <div class="team-name">{{ game.awayTeam }}</div>
         <div class="score">{{ game.awayScore }}</div>
       </div>
     </div>
@@ -19,10 +33,10 @@
     </div>
 
     <div class="cheering-info">
-      <div class="cheer-count">
+      <div class="cheer-count" :style="{ backgroundColor: homeTeamInfo.color }">
         {{ game.homeTeam }} {{ game.homeCheerCount }}
       </div>
-      <div class="cheer-count">
+      <div class="cheer-count" :style="{ backgroundColor: awayTeamInfo.color }">
         {{ game.awayTeam }} {{ game.awayCheerCount }}
       </div>
     </div>
@@ -41,9 +55,11 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { getTeamInfo } from '../../utils/teamUtils'
 import GameStatus from './GameStatus.vue'
 
-defineProps({
+const props = defineProps({
   game: {
     type: Object,
     required: true,
@@ -51,6 +67,9 @@ defineProps({
 })
 
 defineEmits(['click'])
+
+const homeTeamInfo = computed(() => getTeamInfo(props.game.homeTeam))
+const awayTeamInfo = computed(() => getTeamInfo(props.game.awayTeam))
 </script>
 
 <style scoped>
@@ -84,17 +103,30 @@ defineEmits(['click'])
 }
 
 .team-logo {
-  width: 40px;
-  height: 40px;
-  background: #2c5aa0;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
-  margin: 0 auto 5px;
+  margin: 0 auto 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-weight: bold;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  overflow: hidden;
+}
+
+.team-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.team-name {
   font-size: 0.9rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
 }
 
 .vs {
@@ -122,14 +154,17 @@ defineEmits(['click'])
   display: flex;
   justify-content: space-between;
   margin-bottom: 15px;
+  gap: 10px;
 }
 
 .cheer-count {
-  background: #ff6b6b;
   color: white;
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-radius: 15px;
   font-size: 0.8rem;
+  font-weight: bold;
+  flex: 1;
+  text-align: center;
 }
 
 .chat-preview {
@@ -158,6 +193,10 @@ defineEmits(['click'])
   .game-card {
     min-width: auto;
     margin-bottom: 15px;
+  }
+
+  .cheering-info {
+    flex-direction: column;
   }
 }
 </style>

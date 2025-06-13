@@ -1,23 +1,41 @@
+// src/stores/chat.js
 import { defineStore } from 'pinia'
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
-    messages: [],
+    homeMessages: [],
+    awayMessages: [],
     participants: 0,
     connected: false,
     currentGameId: null,
+    currentGame: null,
     socket: null,
+    selectedTeam: null, // 'home' 또는 'away'
   }),
 
   getters: {
-    getMessages: state => state.messages,
+    getHomeMessages: state => state.homeMessages,
+    getAwayMessages: state => state.awayMessages,
+    getAllMessages: state => {
+      // 시간순으로 정렬된 전체 메시지
+      const allMessages = [
+        ...state.homeMessages.map(msg => ({ ...msg, team: 'home' })),
+        ...state.awayMessages.map(msg => ({ ...msg, team: 'away' })),
+      ]
+      return allMessages.sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+      )
+    },
     getParticipants: state => state.participants,
     isConnected: state => state.connected,
+    getSelectedTeam: state => state.selectedTeam,
+    getCurrentGame: state => state.currentGame,
   },
 
   actions: {
-    connectToGame(gameId) {
+    connectToGame(gameId, gameData) {
       this.currentGameId = gameId
+      this.currentGame = gameData
       this.connected = true
 
       // TODO: 실제 WebSocket 연결
@@ -40,8 +58,11 @@ export const useChatStore = defineStore('chat', {
       }
       this.connected = false
       this.currentGameId = null
-      this.messages = []
+      this.currentGame = null
+      this.homeMessages = []
+      this.awayMessages = []
       this.participants = 0
+      this.selectedTeam = null
 
       // 시뮬레이션 중지
       if (this.messageInterval) {
@@ -50,13 +71,24 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    sendMessage(content, nickname = '👤나') {
+    setSelectedTeam(team) {
+      this.selectedTeam = team
+    },
+
+    sendMessage(content, team = null) {
+      const targetTeam = team || this.selectedTeam
+      if (!targetTeam) {
+        console.error('팀을 선택해주세요')
+        return
+      }
+
       const message = {
         id: Date.now(),
-        nickname,
+        nickname: '👤나',
         content,
         timestamp: new Date(),
         gameId: this.currentGameId,
+        team: targetTeam,
       }
 
       this.addMessage(message)
@@ -65,20 +97,29 @@ export const useChatStore = defineStore('chat', {
       // this.socket.emit('sendMessage', message)
 
       // 자동 응답 시뮬레이션
-      this.simulateAutoResponse()
+      this.simulateAutoResponse(targetTeam)
     },
 
     addMessage(message) {
-      this.messages.push({
+      const messageData = {
         id: message.id || Date.now(),
         nickname: message.nickname,
         content: message.content,
         timestamp: message.timestamp || new Date(),
-      })
+      }
 
-      // 메시지 개수 제한 (최대 100개)
-      if (this.messages.length > 100) {
-        this.messages = this.messages.slice(-100)
+      if (message.team === 'home') {
+        this.homeMessages.push(messageData)
+        // 메시지 개수 제한 (최대 50개)
+        if (this.homeMessages.length > 50) {
+          this.homeMessages = this.homeMessages.slice(-50)
+        }
+      } else if (message.team === 'away') {
+        this.awayMessages.push(messageData)
+        // 메시지 개수 제한 (최대 50개)
+        if (this.awayMessages.length > 50) {
+          this.awayMessages = this.awayMessages.slice(-50)
+        }
       }
     },
 
@@ -86,48 +127,45 @@ export const useChatStore = defineStore('chat', {
       this.participants = count
     },
 
-    loadInitialMessages() {
-      // 임시 초기 메시지들 gameId 파라미터 나중에
-      const initialMessages = [
+    loadInitialMessages(gameId) {
+      // 홈팀 초기 메시지들
+      const homeInitialMessages = [
         {
           id: 1,
-          nickname: '⭐야구팬123',
-          content: '와!! 홈런이다!! 두산 화이팅!',
+          nickname: '⭐홈팀팬123',
+          content: '홈팀 화이팅! 오늘도 승리하자!',
           timestamp: new Date(Date.now() - 300000),
-        },
-        {
-          id: 2,
-          nickname: '🔥LG매니아',
-          content: '아쉽네요... 그래도 아직 안 끝났어요!',
-          timestamp: new Date(Date.now() - 240000),
+          team: 'home',
         },
         {
           id: 3,
-          nickname: '⚾베이스볼러버',
-          content: '정말 박진감 넘치는 경기네요 👏',
+          nickname: '🔥홈팀매니아',
+          content: '분위기 좋다! 이대로 쭉~',
           timestamp: new Date(Date.now() - 180000),
-        },
-        {
-          id: 4,
-          nickname: '🏟️잠실단골',
-          content: '현장 분위기 정말 뜨겁습니다!',
-          timestamp: new Date(Date.now() - 120000),
-        },
-        {
-          id: 5,
-          nickname: '⭐야구팬123',
-          content: '투수 교체 타이밍이 관건이겠어요',
-          timestamp: new Date(Date.now() - 60000),
-        },
-        {
-          id: 6,
-          nickname: '🔥LG매니아',
-          content: '역전 기회 만들어보자!',
-          timestamp: new Date(Date.now() - 30000),
+          team: 'home',
         },
       ]
 
-      this.messages = initialMessages
+      // 원정팀 초기 메시지들
+      const awayInitialMessages = [
+        {
+          id: 2,
+          nickname: '⚾원정팬456',
+          content: '원정에서도 화이팅! 역전하자!',
+          timestamp: new Date(Date.now() - 240000),
+          team: 'away',
+        },
+        {
+          id: 4,
+          nickname: '🏟️원정응원단',
+          content: '아직 안 끝났어요! 끝까지 응원!',
+          timestamp: new Date(Date.now() - 120000),
+          team: 'away',
+        },
+      ]
+
+      homeInitialMessages.forEach(msg => this.addMessage(msg))
+      awayInitialMessages.forEach(msg => this.addMessage(msg))
     },
 
     startMessageSimulation() {
@@ -136,72 +174,75 @@ export const useChatStore = defineStore('chat', {
           // 30% 확률로 새 메시지
           this.addRandomMessage()
         }
-      }, 5000)
+      }, 5000) // 5초마다 체크
     },
 
     addRandomMessage() {
-      const users = [
-        '⭐야구매니아',
-        '🔥팬클럽',
-        '⚾관전러',
-        '🏟️현장팬',
-        '👏응원단장',
-        '🎯야구통',
-        '💙블루팬',
-      ]
-      const messages = [
-        '좋은 플레이네요!',
-        '화이팅!',
-        '긴장되는 순간이에요',
-        '대박 경기다!',
-        '응원합니다 👏',
-        '멋진 경기예요',
-        '하트 뛴다 💓',
-        '집중하세요!',
-        '최고입니다!',
-        '이런 경기가 진짜 야구지!',
-        '투수 좋네요',
-        '타자 집중!',
-        '수비 완벽해요',
-        '감독님 교체 타이밍!',
-        '9회말까지 모르는 거죠!',
+      const teams = ['home', 'away']
+      const randomTeam = teams[Math.floor(Math.random() * teams.length)]
+
+      const homeMessages = [
+        '홈팀 화이팅!',
+        '좋은 경기네요!',
+        '홈런 기대해봅니다!',
+        '수비 잘하고 있어요!',
+        '분위기 최고!',
       ]
 
-      const user = users[Math.floor(Math.random() * users.length)]
-      const message = messages[Math.floor(Math.random() * messages.length)]
+      const awayMessages = [
+        '원정팀도 화이팅!',
+        '역전 기회다!',
+        '끝까지 응원합니다!',
+        '좋은 플레이!',
+        '집중해서 응원!',
+      ]
+
+      const messages = randomTeam === 'home' ? homeMessages : awayMessages
+      const randomMessage =
+        messages[Math.floor(Math.random() * messages.length)]
+
+      const nicknames =
+        randomTeam === 'home'
+          ? ['🏠홈팬', '⚾홈응원', '🔥홈매니아', '⭐홈관전']
+          : ['✈️원정팬', '🚌원정응원', '💪원정매니아', '🎯원정관전']
+
+      const randomNickname =
+        nicknames[Math.floor(Math.random() * nicknames.length)]
 
       this.addMessage({
         id: Date.now() + Math.random(),
-        nickname: user,
-        content: message,
+        nickname: randomNickname,
+        content: randomMessage,
         timestamp: new Date(),
+        team: randomTeam,
       })
     },
 
-    simulateAutoResponse() {
+    simulateAutoResponse(targetTeam) {
       setTimeout(
         () => {
-          const responses = [
-            '좋은 의견이네요!',
-            '동감합니다 👍',
-            '정말 박진감 넘치는 경기예요!',
-            '화이팅!',
-            '맞아요, 그렇게 생각해요',
-            '현장에서 보면 더 재밌을 것 같아요!',
-            '다음 경기도 기대됩니다',
-            '야구 최고!',
-          ]
+          const responses = {
+            home: ['홈팀 응원 감사합니다!', '함께 응원해요!', '홈팀 파이팅!'],
+            away: [
+              '원정팀도 화이팅!',
+              '끝까지 응원합시다!',
+              '좋은 경기 만들어요!',
+            ],
+          }
+          const teamResponses = responses[targetTeam]
           const randomResponse =
-            responses[Math.floor(Math.random() * responses.length)]
+            teamResponses[Math.floor(Math.random() * teamResponses.length)]
+
           this.addMessage({
             id: Date.now() + Math.random(),
-            nickname: '⚾야구팬',
+            nickname: targetTeam === 'home' ? '🏠홈팬' : '✈️원정팬',
             content: randomResponse,
             timestamp: new Date(),
+            team: targetTeam,
           })
         },
-        1000 + Math.random() * 3000
-      )
+        1000 + Math.random() * 2000
+      ) // 1-3초 후 응답
     },
   },
 })
