@@ -44,9 +44,9 @@
         <LiveCommentary :gameId="gameId" />
       </div> -->
 
-      <!-- 팀별 채팅 (하단 전체 너비) -->
+      <!-- 통합 채팅 (하단 전체 너비) -->
       <div class="chat-section-full">
-        <TeamChatSection :gameId="gameId" :game="game" />
+        <UnifiedChatSection :game-id="gameId" :game="game" />
       </div>
     </div>
   </div>
@@ -59,7 +59,7 @@ import { useGameStore } from '../stores/game'
 import { useChatStore } from '../stores/chat'
 import { getTeamInfo } from '../utils/teamUtils'
 import LiveCommentary from '../components/commentary/LiveCommentary.vue'
-import TeamChatSection from '../components/chat/TeamChatSection.vue'
+import UnifiedChatSection from '../components/chat/UnifiedChatSection.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -219,8 +219,8 @@ onUnmounted(() => {
   margin-bottom: 20px;
 }
 
-/* 팀별 채팅이 전체 너비를 차지하도록 */
-.chat-section-full :deep(.team-chat-section) {
+/* 통합 채팅이 전체 너비를 차지하도록 */
+.chat-section-full :deep(.unified-chat-section) {
   min-height: 600px;
 }
 
@@ -263,7 +263,7 @@ onUnmounted(() => {
     gap: 5px;
   }
 
-  .chat-section-full :deep(.team-chat-section) {
+  .chat-section-full :deep(.unified-chat-section) {
     min-height: 500px;
   }
 }
