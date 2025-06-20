@@ -1,4 +1,13 @@
 <template>
+  <!-- 팀별 화력 표시 -->
+  <TeamFirepowerIndicator
+    :homeTeam="game.homeTeam"
+    :awayTeam="game.awayTeam"
+    :homeMessageCount="homeMessages.length"
+    :awayMessageCount="awayMessages.length"
+    :homeTeamInfo="homeTeamInfo"
+    :awayTeamInfo="awayTeamInfo"
+  />
   <div class="unified-chat-section">
     <!-- 채팅방 헤더 -->
     <div class="chat-header">
@@ -166,6 +175,7 @@ import { computed, onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
 import { useChatStore } from '../../stores/chat'
 import { getTeamInfo } from '../../utils/teamUtils'
 import ChatMessage from './ChatMessage.vue'
+import TeamFirepowerIndicator from './TeamFirepowerIndicator.vue'
 
 const props = defineProps({
   gameId: {
@@ -284,7 +294,7 @@ onUnmounted(() => {
 .unified-chat-section {
   display: flex;
   flex-direction: column;
-  height: 1200px;
+  height: 900px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -521,7 +531,7 @@ onUnmounted(() => {
 /* 모바일 반응형 */
 @media (max-width: 768px) {
   .unified-chat-section {
-    height: 700px;
+    height: 800px;
   }
 
   .chat-header {
@@ -567,9 +577,11 @@ onUnmounted(() => {
     padding: 10px 20px;
     min-width: 70px;
   }
+
   .quick-messages {
     gap: 6px;
   }
+
   .quick-btn {
     padding: 3px 8px;
     font-size: 0.75rem;
