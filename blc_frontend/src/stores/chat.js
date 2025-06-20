@@ -1,306 +1,271 @@
-// src/stores/chat.js
+// src/stores/chat.js - WebSocket 실시간 채팅 구현
 import { defineStore } from 'pinia'
+import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
-    homeMessages: [],
-    awayMessages: [],
-    participants: 0,
+    // 실시간 메시지만 저장 (기존 메시지 없음)
+    messages: [],
     connected: false,
     currentGameId: null,
     currentGame: null,
-    socket: null,
+    stompClient: null,
     selectedTeam: null, // 'home' 또는 'away'
-    messageInterval: null,
+    participants: 0,
+    connectionError: null,
   }),
 
   getters: {
-    getHomeMessages: state => state.homeMessages,
-    getAwayMessages: state => state.awayMessages,
-    getAllMessages: state => {
-      // 시간순으로 정렬된 전체 메시지 (team 속성 포함)
-      const allMessages = [
-        ...state.homeMessages.map(msg => ({ ...msg, team: 'home' })),
-        ...state.awayMessages.map(msg => ({ ...msg, team: 'away' })),
-      ]
-      return allMessages.sort(
-        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+    // 홈팀 메시지 필터링
+    getHomeMessages: state => {
+      if (!state.currentGame) return []
+      return state.messages.filter(
+        msg =>
+          msg.teamId === state.currentGame.homeTeamId || msg.team === 'home'
       )
     },
+
+    // 원정팀 메시지 필터링
+    getAwayMessages: state => {
+      if (!state.currentGame) return []
+      return state.messages.filter(
+        msg =>
+          msg.teamId === state.currentGame.awayTeamId || msg.team === 'away'
+      )
+    },
+
+    // 전체 메시지 (시간순 정렬)
+    getAllMessages: state => {
+      return [...state.messages].sort(
+        (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+      )
+    },
+
     getParticipants: state => state.participants,
     isConnected: state => state.connected,
     getSelectedTeam: state => state.selectedTeam,
     getCurrentGame: state => state.currentGame,
+    getConnectionError: state => state.connectionError,
   },
 
   actions: {
+    // 게임 채팅방 연결
     connectToGame(gameId, gameData) {
       this.currentGameId = gameId
       this.currentGame = gameData
-      this.connected = true
+      this.connectionError = null
 
-      // TODO: 실제 WebSocket 연결
-      // this.socket = io(`/game-${gameId}`)
-      // this.socket.on('newMessage', this.addMessage)
-      // this.socket.on('participantCount', this.setParticipants)
+      // 기존 연결이 있으면 먼저 해제
+      if (this.stompClient) {
+        this.disconnect()
+      }
 
-      // 기존 메시지 초기화
-      this.homeMessages = []
-      this.awayMessages = []
+      try {
+        // SockJS + STOMP 클라이언트 생성
+        const socket = new SockJS(
+          `${process.env.VUE_APP_BACKEND_URL || 'http://localhost:8080'}/chat-socket`
+        )
 
-      // 임시 데이터 로드
-      this.loadInitialMessages(gameId)
-      this.participants = Math.floor(Math.random() * 1000) + 500
+        this.stompClient = new Client({
+          webSocketFactory: () => socket,
 
-      // 임시 실시간 메시지 시뮬레이션
-      this.startMessageSimulation()
+          onConnect: () => {
+            this.connected = true
+            this.connectionError = null
+            console.log(`✅ 게임 ${gameId} 채팅방 연결 성공`)
+
+            // 게임별 채팅방 구독
+            this.stompClient.subscribe(`/topic/game/${gameId}`, message => {
+              try {
+                const chatMessage = JSON.parse(message.body)
+                this.addMessage(chatMessage)
+              } catch (error) {
+                console.error('메시지 파싱 오류:', error)
+              }
+            })
+
+            // 접속자 수 구독 (선택사항)
+            this.stompClient.subscribe(
+              `/topic/game/${gameId}/participants`,
+              message => {
+                try {
+                  const count = JSON.parse(message.body)
+                  this.setParticipants(count)
+                } catch (error) {
+                  console.error('참가자 수 파싱 오류:', error)
+                }
+              }
+            )
+
+            // 입장 알림 (선택사항)
+            this.sendJoinMessage()
+          },
+
+          onStompError: frame => {
+            console.error('STOMP 오류:', frame)
+            this.connectionError = 'WebSocket 연결 오류가 발생했습니다.'
+            this.connected = false
+          },
+
+          onWebSocketClose: () => {
+            console.log('WebSocket 연결 종료')
+            this.connected = false
+          },
+
+          // 자동 재연결 설정
+          reconnectDelay: 5000,
+          heartbeatIncoming: 4000,
+          heartbeatOutgoing: 4000,
+        })
+
+        // 연결 시작
+        this.stompClient.activate()
+      } catch (error) {
+        console.error('WebSocket 연결 실패:', error)
+        this.connectionError = 'WebSocket 연결에 실패했습니다.'
+        this.connected = false
+      }
     },
 
+    // 연결 해제
     disconnect() {
-      if (this.socket) {
-        this.socket.disconnect()
-        this.socket = null
+      if (this.stompClient) {
+        this.stompClient.deactivate()
+        this.stompClient = null
       }
+
       this.connected = false
       this.currentGameId = null
       this.currentGame = null
-      this.homeMessages = []
-      this.awayMessages = []
+      this.messages = []
       this.participants = 0
       this.selectedTeam = null
+      this.connectionError = null
 
-      // 시뮬레이션 중지
-      if (this.messageInterval) {
-        clearInterval(this.messageInterval)
-        this.messageInterval = null
-      }
+      console.log('🔌 채팅방 연결 해제')
     },
 
+    // 응원팀 선택
     setSelectedTeam(team) {
       this.selectedTeam = team
-      console.log('선택된 팀:', team)
+      console.log(`📢 ${team === 'home' ? '홈' : '원정'}팀 응원 선택`)
     },
 
+    // 메시지 전송
     sendMessage(content, team = null) {
+      if (!this.stompClient || !this.connected) {
+        console.error('WebSocket이 연결되지 않았습니다.')
+        return false
+      }
+
       const targetTeam = team || this.selectedTeam
       if (!targetTeam) {
         console.error('팀을 선택해주세요')
-        return
+        return false
       }
 
-      console.log('메시지 전송:', { content, team: targetTeam })
+      try {
+        const message = {
+          userId: 1, // TODO: 실제 로그인 유저 ID로 변경
+          content: content.trim(),
+          type: 'TEXT',
+        }
 
-      const message = {
-        id: Date.now(),
-        nickname: '👤나',
-        content,
-        timestamp: new Date(),
-        gameId: this.currentGameId,
-        team: targetTeam,
+        // WebSocket으로 메시지 전송
+        this.stompClient.publish({
+          destination: `/app/chat.sendMessage/${this.currentGameId}`,
+          body: JSON.stringify(message),
+        })
+
+        console.log(`📤 메시지 전송: ${content}`)
+        return true
+      } catch (error) {
+        console.error('메시지 전송 실패:', error)
+        return false
       }
-
-      this.addMessage(message)
-
-      // TODO: 실제 WebSocket으로 메시지 전송
-      // this.socket.emit('sendMessage', message)
-
-      // 자동 응답 시뮬레이션 (반대팀에서 응답)
-      setTimeout(
-        () => {
-          this.simulateAutoResponse(targetTeam)
-        },
-        1000 + Math.random() * 3000
-      )
     },
 
+    // 입장 메시지 전송 (선택사항)
+    sendJoinMessage() {
+      if (!this.stompClient || !this.connected) return
+
+      try {
+        const joinData = {
+          userId: 1, // TODO: 실제 로그인 유저 ID로 변경
+          action: 'JOIN',
+        }
+
+        this.stompClient.publish({
+          destination: `/app/chat.join/${this.currentGameId}`,
+          body: JSON.stringify(joinData),
+        })
+      } catch (error) {
+        console.error('입장 메시지 전송 실패:', error)
+      }
+    },
+
+    // 새 메시지 추가
     addMessage(message) {
-      const messageData = {
-        id: message.id || Date.now(),
-        nickname: message.nickname,
-        content: message.content,
-        timestamp: message.timestamp || new Date(),
-      }
-
-      console.log('메시지 추가:', { messageData, team: message.team })
-
-      if (message.team === 'home') {
-        this.homeMessages.push(messageData)
-        // 메시지 개수 제한 (최대 50개)
-        if (this.homeMessages.length > 50) {
-          this.homeMessages = this.homeMessages.slice(-50)
+      try {
+        const messageData = {
+          id: message.id || Date.now(),
+          userId: message.userId,
+          nickname: message.nickname || '익명',
+          teamId: message.teamId,
+          content: message.content,
+          type: message.type || 'TEXT',
+          createdAt: message.createdAt
+            ? new Date(message.createdAt)
+            : new Date(),
+          // 팀 구분을 위한 추가 필드
+          team: this.getTeamFromTeamId(message.teamId),
         }
-      } else if (message.team === 'away') {
-        this.awayMessages.push(messageData)
-        // 메시지 개수 제한 (최대 50개)
-        if (this.awayMessages.length > 50) {
-          this.awayMessages = this.awayMessages.slice(-50)
-        }
-      }
 
-      console.log('현재 메시지 상태:', {
-        home: this.homeMessages.length,
-        away: this.awayMessages.length,
-      })
+        this.messages.push(messageData)
+
+        // 메모리 관리: 최대 100개 메시지만 유지
+        if (this.messages.length > 100) {
+          this.messages = this.messages.slice(-100)
+        }
+
+        console.log(
+          `📨 새 메시지 추가: ${messageData.nickname}: ${messageData.content}`
+        )
+      } catch (error) {
+        console.error('메시지 추가 오류:', error)
+      }
     },
 
+    // 접속자 수 설정
     setParticipants(count) {
       this.participants = count
     },
 
-    loadInitialMessages(gameId) {
-      // 홈팀 초기 메시지들
-      const homeInitialMessages = [
-        {
-          id: 1,
-          nickname: '⭐홈팬123',
-          content: '홈팀 화이팅! 오늘도 승리하자!',
-          timestamp: new Date(Date.now() - 300000),
-          team: 'home',
-        },
-        {
-          id: 3,
-          nickname: '🔥홈팀매니아',
-          content: '분위기 좋다! 이대로 쭉~',
-          timestamp: new Date(Date.now() - 180000),
-          team: 'home',
-        },
-        {
-          id: 5,
-          nickname: '🏠홈그라운드',
-          content: '홈에서 이기자! 파이팅!',
-          timestamp: new Date(Date.now() - 100000),
-          team: 'home',
-        },
-      ]
+    // teamId를 기반으로 home/away 구분
+    getTeamFromTeamId(teamId) {
+      if (!this.currentGame) return 'home'
 
-      // 원정팀 초기 메시지들
-      const awayInitialMessages = [
-        {
-          id: 2,
-          nickname: '⚾원정팬456',
-          content: '원정에서도 화이팅! 역전하자!',
-          timestamp: new Date(Date.now() - 240000),
-          team: 'away',
-        },
-        {
-          id: 4,
-          nickname: '🏟️원정응원단',
-          content: '아직 안 끝났어요! 끝까지 응원!',
-          timestamp: new Date(Date.now() - 120000),
-          team: 'away',
-        },
-        {
-          id: 6,
-          nickname: '✈️원정전사',
-          content: '멀리서 와서 응원한다! 화이팅!',
-          timestamp: new Date(Date.now() - 60000),
-          team: 'away',
-        },
-      ]
-
-      homeInitialMessages.forEach(msg => this.addMessage(msg))
-      awayInitialMessages.forEach(msg => this.addMessage(msg))
-    },
-
-    startMessageSimulation() {
-      this.messageInterval = setInterval(() => {
-        if (Math.random() < 0.4) {
-          // 40% 확률로 새 메시지
-          this.addRandomMessage()
-        }
-      }, 4000) // 4초마다 체크
-    },
-
-    addRandomMessage() {
-      const teams = ['home', 'away']
-      const randomTeam = teams[Math.floor(Math.random() * teams.length)]
-
-      const homeMessages = [
-        '홈팀 화이팅!',
-        '좋은 경기네요!',
-        '홈런 기대해봅니다!',
-        '수비 잘하고 있어요!',
-        '분위기 최고!',
-        '오늘은 이긴다!',
-        '홈에서 승리하자!',
-      ]
-
-      const awayMessages = [
-        '원정팀도 화이팅!',
-        '역전 기회다!',
-        '끝까지 응원합니다!',
-        '좋은 플레이!',
-        '집중해서 응원!',
-        '멀리서 왔는데 보람있게!',
-        '원정승 가자!',
-      ]
-
-      const messages = randomTeam === 'home' ? homeMessages : awayMessages
-      const randomMessage =
-        messages[Math.floor(Math.random() * messages.length)]
-
-      const homeNicknames = [
-        '🏠홈팬A',
-        '⭐홈그라운드',
-        '🔥홈응원단',
-        '💪홈파워',
-        '🎉홈승리',
-      ]
-
-      const awayNicknames = [
-        '✈️원정팬B',
-        '🚌원정응원',
-        '⚾원정전사',
-        '🏟️원정단',
-        '💙원정파워',
-      ]
-
-      const nicknames = randomTeam === 'home' ? homeNicknames : awayNicknames
-      const randomNickname =
-        nicknames[Math.floor(Math.random() * nicknames.length)]
-
-      const newMessage = {
-        id: Date.now() + Math.random(),
-        nickname: randomNickname,
-        content: randomMessage,
-        timestamp: new Date(),
-        team: randomTeam,
+      if (teamId === this.currentGame.homeTeamId) {
+        return 'home'
+      } else if (teamId === this.currentGame.awayTeamId) {
+        return 'away'
       }
 
-      this.addMessage(newMessage)
+      return 'home' // 기본값
     },
 
-    simulateAutoResponse(originalTeam) {
-      // 반대팀에서 응답
-      const responseTeam = originalTeam === 'home' ? 'away' : 'home'
-
-      const responses = [
-        '우리도 화이팅!',
-        '좋은 경기하자!',
-        '열심히 응원할게요!',
-        '파이팅!',
-        '좋은 플레이 기대해요!',
-      ]
-
-      const responseNicknames =
-        responseTeam === 'home'
-          ? ['🏠응답팬', '⭐홈응답', '🔥홈팬응답']
-          : ['✈️원정응답', '⚾응답팬', '🏟️원정응답']
-
-      const randomResponse =
-        responses[Math.floor(Math.random() * responses.length)]
-      const randomNickname =
-        responseNicknames[Math.floor(Math.random() * responseNicknames.length)]
-
-      const responseMessage = {
-        id: Date.now() + Math.random(),
-        nickname: randomNickname,
-        content: randomResponse,
-        timestamp: new Date(),
-        team: responseTeam,
+    // 연결 재시도
+    reconnect() {
+      if (this.currentGameId && this.currentGame) {
+        console.log('🔄 WebSocket 재연결 시도...')
+        this.connectToGame(this.currentGameId, this.currentGame)
       }
+    },
 
-      this.addMessage(responseMessage)
+    // 연결 상태 확인
+    checkConnection() {
+      return this.stompClient && this.connected
     },
   },
 })
