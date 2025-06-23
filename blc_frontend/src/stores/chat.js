@@ -1,5 +1,6 @@
 // src/stores/chat.js
 import { defineStore } from 'pinia'
+import http from '@/lib/http'
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
@@ -12,6 +13,12 @@ export const useChatStore = defineStore('chat', {
     socket: null,
     selectedTeam: null, // 'home' 또는 'away'
     messageInterval: null,
+    chatRooms: [],
+    roomsLoading: false,
+    roomsError: null,
+    gameDetails: {}, // ← 추가: { [gameId]: GameDetailInfo }
+    detailsLoading: false, // (선택) 전체 gameDetails 로딩 플래그
+    detailsError: null, // (선택) 상세 조회 에러
   }),
 
   getters: {
@@ -31,9 +38,55 @@ export const useChatStore = defineStore('chat', {
     isConnected: state => state.connected,
     getSelectedTeam: state => state.selectedTeam,
     getCurrentGame: state => state.currentGame,
+    // (4) chatRooms 와 gameDetails 를 합쳐서, 각 원소에 gameDetail 속성 붙인 배열
+    roomsWithDetails: state =>
+      state.chatRooms
+        .map(room => ({
+          ...room,
+          game: state.gameDetails[room.gameId], // GameDetailInfo
+        }))
+        .filter(item => item.game), // 상세 없는 건 제외
   },
 
   actions: {
+    async fetchChatRooms() {
+      this.roomsLoading = true
+      this.roomsError = null
+      try {
+        const res = await http.get('/api/chat-rooms')
+        this.chatRooms = res.data
+      } catch (err) {
+        this.roomsError = err.response?.data?.message || err.message
+      } finally {
+        this.roomsLoading = false
+      }
+    },
+    // (2) 특정 gameId 상세 조회
+    async fetchGameDetail(gameId) {
+      try {
+        const res = await http.get(`/api/games/${gameId}`)
+        this.gameDetails[gameId] = res.data
+      } catch (e) {
+        console.error(`게임 상세 조회 실패: ${gameId}`, e)
+        throw e
+      }
+    },
+    // (3) 활성 채팅방 전부 가져온 뒤, 거기에 딸린 게임 상세를 한 번에 조회
+    async fetchActiveWithDetails() {
+      this.detailsLoading = true
+      this.detailsError = null
+      await this.fetchChatRooms()
+      try {
+        // Promise.all 으로 병렬 조회
+        await Promise.all(
+          this.chatRooms.map(room => this.fetchGameDetail(room.gameId))
+        )
+      } catch (e) {
+        this.detailsError = e.message
+      } finally {
+        this.detailsLoading = false
+      }
+    },
     connectToGame(gameId, gameData) {
       this.currentGameId = gameId
       this.currentGame = gameData
