@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import GameDetail from '../views/GameDetail.vue'
 import LoginForm from '@/components/auth/LoginForm.vue'
-import RegisterForm from '@/components/auth/RegisterForm.vue'
+import FirebaseRegisterForm from '@/components/auth/FirebaseRegisterForm.vue'
 import ProfileView from '@/views/ProfileView.vue'
 
 const routes = [
@@ -31,7 +31,7 @@ const routes = [
   {
     path: '/register',
     name: 'Register',
-    component: RegisterForm,
+    component: FirebaseRegisterForm,
     meta: {
       title: '회원가입 | BLC',
       requiresGuest: true,
