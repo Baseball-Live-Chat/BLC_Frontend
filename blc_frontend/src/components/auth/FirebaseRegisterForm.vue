@@ -1,23 +1,23 @@
 <template>
-  <div class="login-container">
-    <div class="login-form">
+  <div class="register-container">
+    <div class="register-form">
       <!-- 헤더 -->
       <div class="form-header">
         <div class="brand">
           <span class="brand-icon">⚾</span>
           <h1 class="brand-title">BLC</h1>
         </div>
-        <p class="form-subtitle">야구 팬들과 함께하는 실시간 소통</p>
+        <p class="form-subtitle">야구 팬 커뮤니티에 참여하세요!</p>
       </div>
 
-      <!-- 로그인 폼 -->
-      <form @submit.prevent="handleLogin" class="auth-form">
+      <!-- 회원가입 폼 -->
+      <form @submit.prevent="handleRegister" class="auth-form">
         <!-- 이메일 입력 -->
         <div class="form-group">
-          <label for="email" class="form-label">이메일</label>
+          <label for="email" class="form-label">이메일 *</label>
           <input
             id="email"
-            v-model="loginForm.email"
+            v-model="registerForm.email"
             type="email"
             placeholder="이메일을 입력하세요"
             required
@@ -27,32 +27,71 @@
           />
         </div>
 
-        <!-- 비밀번호 입력 -->
+        <!-- 닉네임 입력 -->
         <div class="form-group">
-          <label for="password" class="form-label">비밀번호</label>
+          <label for="displayName" class="form-label">닉네임 *</label>
           <input
-            id="password"
-            v-model="loginForm.password"
-            type="password"
-            placeholder="비밀번호를 입력하세요"
+            id="displayName"
+            v-model="registerForm.displayName"
+            type="text"
+            placeholder="2-10자 한글, 영문, 숫자"
             required
             :disabled="authStore.isLoading"
             class="form-input"
-            autocomplete="current-password"
+            autocomplete="nickname"
           />
+          <div
+            v-if="registerForm.displayName && !isDisplayNameValid"
+            class="field-message invalid"
+          >
+            닉네임은 2-10자의 한글, 영문, 숫자만 사용 가능합니다.
+          </div>
         </div>
 
-        <!-- 이메일 저장 체크박스 -->
+        <!-- 비밀번호 입력 -->
         <div class="form-group">
-          <label class="checkbox-container">
-            <input
-              v-model="rememberEmail"
-              type="checkbox"
-              class="checkbox-input"
-            />
-            <span class="checkbox-checkmark"></span>
-            <span class="checkbox-label">이메일 저장</span>
-          </label>
+          <label for="password" class="form-label">비밀번호 *</label>
+          <input
+            id="password"
+            v-model="registerForm.password"
+            type="password"
+            placeholder="6자 이상"
+            required
+            :disabled="authStore.isLoading"
+            class="form-input"
+            autocomplete="new-password"
+          />
+          <div
+            v-if="registerForm.password"
+            class="field-message"
+            :class="passwordStrength.class"
+          >
+            {{ passwordStrength.message }}
+          </div>
+        </div>
+
+        <!-- 비밀번호 확인 -->
+        <div class="form-group">
+          <label for="passwordConfirm" class="form-label">비밀번호 확인 *</label>
+          <input
+            id="passwordConfirm"
+            v-model="registerForm.passwordConfirm"
+            type="password"
+            placeholder="비밀번호를 다시 입력하세요"
+            required
+            :disabled="authStore.isLoading"
+            class="form-input"
+            :class="{
+              invalid: registerForm.passwordConfirm && !passwordsMatch,
+            }"
+            autocomplete="new-password"
+          />
+          <div
+            v-if="registerForm.passwordConfirm && !passwordsMatch"
+            class="field-message invalid"
+          >
+            비밀번호가 일치하지 않습니다.
+          </div>
         </div>
 
         <!-- 에러 메시지 -->
@@ -61,7 +100,7 @@
           {{ authStore.error }}
         </div>
 
-        <!-- 로그인 버튼 -->
+        <!-- 회원가입 버튼 -->
         <button
           type="submit"
           :disabled="authStore.isLoading || !isFormValid"
@@ -70,17 +109,17 @@
         >
           <span v-if="authStore.isLoading" class="button-loading">
             <span class="spinner"></span>
-            로그인 중...
+            회원가입 중...
           </span>
-          <span v-else> 🔐 로그인 </span>
+          <span v-else>🎯 회원가입</span>
         </button>
       </form>
 
-      <!-- 회원가입 링크 -->
+      <!-- 로그인 링크 -->
       <div class="form-footer">
         <p class="footer-text">
-          아직 계정이 없으신가요?
-          <router-link to="/register" class="footer-link">회원가입</router-link>
+          이미 계정이 있으신가요?
+          <router-link to="/login" class="footer-link">로그인</router-link>
         </p>
       </div>
     </div>
@@ -96,66 +135,70 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 const router = useRouter()
 
-// 🔑 로컬 스토리지 키
-const SAVED_EMAIL_KEY = 'saved_email'
-const REMEMBER_EMAIL_KEY = 'remember_email'
-
 // 📝 폼 데이터
-const loginForm = ref({
+const registerForm = ref({
   email: '',
+  displayName: '',
   password: '',
+  passwordConfirm: '',
 })
-
-// 💾 이메일 저장 체크박스
-const rememberEmail = ref(false)
 
 // 🧮 계산된 속성
-const isFormValid = computed(() => {
-  return loginForm.value.email.trim() && loginForm.value.password.trim()
+const isDisplayNameValid = computed(() => {
+  const displayName = registerForm.value.displayName
+  if (!displayName) return true
+  return /^[가-힣a-zA-Z0-9]{2,10}$/.test(displayName)
 })
 
-// 💾 이메일 저장 함수
-const saveEmail = () => {
-  if (rememberEmail.value && loginForm.value.email.trim()) {
-    localStorage.setItem(SAVED_EMAIL_KEY, loginForm.value.email.trim())
-    localStorage.setItem(REMEMBER_EMAIL_KEY, 'true')
-  } else {
-    localStorage.removeItem(SAVED_EMAIL_KEY)
-    localStorage.removeItem(REMEMBER_EMAIL_KEY)
-  }
-}
+const passwordsMatch = computed(() => {
+  return registerForm.value.password === registerForm.value.passwordConfirm
+})
 
-// 📖 저장된 이메일 불러오기
-const loadSavedEmail = () => {
-  const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY)
-  const shouldRemember = localStorage.getItem(REMEMBER_EMAIL_KEY) === 'true'
+const passwordStrength = computed(() => {
+  const password = registerForm.value.password
+  if (!password) return { message: '', class: '' }
   
-  if (savedEmail && shouldRemember) {
-    loginForm.value.email = savedEmail
-    rememberEmail.value = true
+  if (password.length < 6) {
+    return { message: '비밀번호는 최소 6자 이상이어야 합니다.', class: 'invalid' }
+  } else if (password.length >= 8 && /(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
+    return { message: '강한 비밀번호입니다.', class: 'valid' }
+  } else {
+    return { message: '사용 가능한 비밀번호입니다.', class: 'warning' }
   }
-}
+})
+
+const isFormValid = computed(() => {
+  return (
+    registerForm.value.email.trim() &&
+    registerForm.value.displayName.trim() &&
+    registerForm.value.password.trim() &&
+    registerForm.value.passwordConfirm.trim() &&
+    isDisplayNameValid.value &&
+    passwordsMatch.value &&
+    registerForm.value.password.length >= 6
+  )
+})
 
 // ⚡ 메서드
-const handleLogin = async () => {
+const handleRegister = async () => {
   authStore.clearError()
 
-  // 이메일 저장 처리
-  saveEmail()
-
-  const success = await authStore.loginWithEmail(
-    loginForm.value.email.trim(),
-    loginForm.value.password
+  const success = await authStore.registerWithEmail(
+    registerForm.value.email.trim(),
+    registerForm.value.password,
+    registerForm.value.displayName.trim()
   )
 
   if (success) {
-    // 로그인 성공하면 무조건 메인('/')으로
+    // 회원가입 성공하면 홈으로
     await router.push('/')
-    // 폼 초기화 (비밀번호만 초기화)
-    loginForm.value.password = ''
-  } else {
-    // 로그인 실패 시에도 redirect 파라미터 제거
-    await router.replace('/login')
+    // 폼 초기화
+    registerForm.value = {
+      email: '',
+      displayName: '',
+      password: '',
+      passwordConfirm: '',
+    }
   }
 }
 
@@ -165,9 +208,6 @@ onMounted(() => {
   if (authStore.isAuthenticated) {
     router.push('/')
   }
-
-  // 저장된 이메일 불러오기
-  loadSavedEmail()
   
   // Firebase 인증 상태 리스너 초기화
   authStore.initializeAuth()
@@ -175,7 +215,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.login-container {
+.register-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -184,9 +224,9 @@ onMounted(() => {
   padding: 20px;
 }
 
-.login-form {
+.register-form {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   background: white;
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
@@ -279,58 +319,31 @@ onMounted(() => {
   opacity: 0.7;
 }
 
-/* 체크박스 */
-.checkbox-container {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-  font-size: 14px;
-  color: #374151;
-  margin-top: 4px;
+.form-input.invalid {
+  border-color: #dc2626;
+  background-color: #fef2f2;
 }
 
-.checkbox-input {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
+/* 필드 메시지 */
+.field-message {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
-.checkbox-checkmark {
-  position: relative;
-  width: 18px;
-  height: 18px;
-  border: 2px solid #d1d5db;
-  border-radius: 4px;
-  margin-right: 8px;
-  transition: all 0.2s ease;
+.field-message.valid {
+  color: #059669;
+  background-color: #ecfdf5;
 }
 
-.checkbox-checkmark::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 4px;
-  height: 8px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.field-message.warning {
+  color: #d97706;
+  background-color: #fffbeb;
 }
 
-.checkbox-input:checked + .checkbox-checkmark {
-  background-color: #2c5aa0;
-  border-color: #2c5aa0;
-}
-
-.checkbox-input:checked + .checkbox-checkmark::after {
-  opacity: 1;
-}
-
-.checkbox-label {
-  font-weight: 500;
+.field-message.invalid {
+  color: #dc2626;
+  background-color: #fef2f2;
 }
 
 /* 에러 메시지 */
@@ -429,11 +442,11 @@ onMounted(() => {
 
 /* 반응형 */
 @media (max-width: 480px) {
-  .login-container {
+  .register-container {
     padding: 16px;
   }
   
-  .login-form {
+  .register-form {
     padding: 24px;
   }
   
