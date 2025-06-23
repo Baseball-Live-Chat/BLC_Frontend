@@ -42,7 +42,7 @@ const chatLoading = computed(() => chatStore.detailsLoading)
 const chatError = computed(() => chatStore.detailsError)
 
 const goToChatRoom = id => {
-  router.push(`/chat-rooms/${id}`)
+  router.push(`/games/${id}`)
 }
 
 onMounted(async () => {
