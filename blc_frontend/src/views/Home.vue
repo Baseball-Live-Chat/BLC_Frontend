@@ -5,20 +5,21 @@
 
     <!-- 경기 카드 섹션 -->
     <div class="games-section">
-      <h2 class="games-title">🔥 진행 중인 경기</h2>
+      <h2 class="games-title">🔥 활성화된 채팅방</h2>
 
-      <div v-if="loading" class="loading">경기 정보를 불러오는 중...</div>
+      <div v-if="chatLoading" class="loading">채팅방 정보를 불러오는 중...</div>
 
-      <div v-else-if="error" class="error">
-        {{ error }}
+      <div v-else-if="chatError" class="error">
+        {{ chatError }}
       </div>
 
       <div v-else class="games-list">
-        <GameCard
-          v-for="game in games"
-          :key="game.id"
-          :game="game"
-          @click="goToGameDetail(game.id)"
+        <ChatRoomCard
+          v-for="item in chatRooms"
+          :key="item.roomId"
+          :room="item"
+          :game="item.game"
+          @click="goToChatRoom(item.roomId)"
         />
       </div>
     </div>
@@ -28,25 +29,24 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useGameStore } from '../stores/game'
+import { useChatStore } from '../stores/chat'
+
 import RankingSection from '../components/game/RankingSection.vue'
-import GameCard from '../components/game/GameCard.vue'
+import ChatRoomCard from '../components/chat/ChatRoomCard.vue'
 
 const router = useRouter()
-const gameStore = useGameStore()
 
-const games = computed(() => gameStore.getTodayGames)
-const rankings = computed(() => gameStore.getRankings)
-const loading = computed(() => gameStore.loading)
-const error = computed(() => gameStore.error)
+const chatStore = useChatStore()
+const chatRooms = computed(() => chatStore.roomsWithDetails)
+const chatLoading = computed(() => chatStore.detailsLoading)
+const chatError = computed(() => chatStore.detailsError)
 
-const goToGameDetail = gameId => {
-  router.push(`/games/${gameId}`)
+const goToChatRoom = id => {
+  router.push(`/chat-rooms/${id}`)
 }
 
 onMounted(async () => {
-  await gameStore.fetchGames()
-  await gameStore.fetchRankings()
+  await chatStore.fetchActiveWithDetails()
 })
 </script>
 

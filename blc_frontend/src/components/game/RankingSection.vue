@@ -1,13 +1,13 @@
 <template>
   <div class="ranking-section">
     <h2 class="ranking-title">🏆 인기 순위</h2>
-    <div class="ranking-list">
+    <!-- <div class="ranking-list">
       <div v-for="ranking in rankings" :key="ranking.rank" class="ranking-item">
         <div class="ranking-number">{{ ranking.rank }}</div>
         <div class="team-name">{{ ranking.teams }}</div>
         <div class="match-count">실시간 {{ ranking.viewers }}명</div>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 
