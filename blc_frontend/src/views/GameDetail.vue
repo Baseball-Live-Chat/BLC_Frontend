@@ -7,7 +7,7 @@
     <div v-else-if="!game" class="error">경기 정보를 찾을 수 없습니다.</div>
 
     <div v-else>
-      <div class="detail-header">
+      <!--<div class="detail-header">
         <div class="detail-teams">
           <div class="detail-team">
             <div class="detail-team-logo">
@@ -37,7 +37,7 @@
           {{ game.inning }} • {{ game.stadium }} • {{ game.startTime }} •
           <span class="game-status">{{ getStatusText(game.status) }}</span>
         </div>
-      </div>
+      </div>-->
 
       <!-- 문자중계 (상단) -->
       <!-- <div class="commentary-section">
