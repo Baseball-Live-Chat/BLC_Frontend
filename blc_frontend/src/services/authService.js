@@ -3,7 +3,7 @@ import axios from 'axios'
 
 // 📊 환경별 API URL 설정
 const API_BASE_URL =
-  process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080/api'
+  (process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080') + '/api'
 // 🔧 Axios 인스턴스 생성
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
