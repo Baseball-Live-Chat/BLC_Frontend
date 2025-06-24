@@ -35,8 +35,7 @@
     },
     "extends": [
       "plugin:vue/vue3-essential",
-      "eslint:recommended",
-      "@vue/eslint-config-prettier"
+      "eslint:recommended"
     ],
     "parserOptions": {
       "ecmaVersion": 2021,
@@ -46,13 +45,7 @@
       "no-console": "off",
       "no-debugger": "off",
       "vue/multi-word-component-names": "off",
-      "no-unused-vars": "off",
-      "prettier/prettier": [
-        "error",
-        {
-          "endOfLine": "auto"
-        }
-      ]
+      "no-unused-vars": "off"
     }
   },
   "prettier": {
