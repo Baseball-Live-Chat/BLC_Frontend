@@ -128,7 +128,7 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // 🆕 4. 채팅방 메시지 기록 조회
+    // 🆕 4. 채팅방 메시지 기록 조회 (강화)
     async loadChatHistory(roomId) {
       this.messagesLoading = true
       this.messagesError = null
@@ -140,19 +140,33 @@ export const useChatStore = defineStore('chat', {
         const messages = response.data || []
         
         console.log('✅ 채팅 기록 로드 완료:', messages.length, '개 메시지')
+        console.log('📋 메시지 상세:', messages)
         
         // 메시지 초기화 후 추가
         this.homeMessages = []
         this.awayMessages = []
         
-        messages.forEach(apiMessage => {
-          const message = this.formatMessage(apiMessage)
-          if (message.team === 'home') {
-            this.homeMessages.push(message)
-          } else if (message.team === 'away') {
-            this.awayMessages.push(message)
-          }
-        })
+        if (messages.length > 0) {
+          messages.forEach(apiMessage => {
+            console.log('🔄 메시지 변환 중:', apiMessage)
+            const message = this.formatMessage(apiMessage)
+            console.log('✅ 변환된 메시지:', message)
+            
+            if (message.team === 'home') {
+              this.homeMessages.push(message)
+            } else if (message.team === 'away') {
+              this.awayMessages.push(message)
+            }
+          })
+          
+          console.log('📊 최종 메시지 현황:', {
+            home: this.homeMessages.length,
+            away: this.awayMessages.length,
+            total: this.homeMessages.length + this.awayMessages.length
+          })
+        } else {
+          console.log('📭 채팅 기록이 없습니다')
+        }
         
       } catch (error) {
         console.error('❌ 채팅 기록 로드 실패:', error)
@@ -223,9 +237,14 @@ export const useChatStore = defineStore('chat', {
           
           // 게임별 메시지 구독
           this.stompClient.subscribe(`/topic/game/${this.currentGameId}`, (message) => {
-            console.log('📨 새 메시지 수신:', message.body)
-            const newMessage = JSON.parse(message.body)
-            this.addMessage(newMessage)
+            console.log('📨 새 메시지 수신 (Raw):', message.body)
+            try {
+              const newMessage = JSON.parse(message.body)
+              console.log('📨 파싱된 메시지:', newMessage)
+              this.addMessage(newMessage)
+            } catch (error) {
+              console.error('❌ 메시지 파싱 실패:', error)
+            }
           })
           
           console.log(`📡 구독 완료: /topic/game/${this.currentGameId}`)
@@ -253,7 +272,7 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // 🆕 7. 메시지 전송 (STOMP 사용)
+    // 🆕 7. 메시지 전송 (백엔드 DTO에 맞춤)
     async sendMessage(content, team = null) {
       const targetTeam = team || this.selectedTeam
       if (!targetTeam || !content.trim()) {
@@ -269,14 +288,17 @@ export const useChatStore = defineStore('chat', {
       try {
         console.log('📤 STOMP 메시지 전송 시도:', { content, team: targetTeam, gameId: this.currentGameId })
         
+        // 🔄 백엔드 DTO 구조에 맞춤
         const messageRequest = {
           userId: 1, // TODO: 실제 사용자 ID
-          messageContent: content.trim(),
-          messageType: 'TEXT',
-          team: targetTeam
+          teamId: targetTeam === 'home' ? 1 : 2, // home=1, away=2로 매핑
+          content: content.trim(), // messageContent → content
+          type: 'TEXT' // messageType → type (MessageType enum)
         }
         
-        // STOMP로 메시지 전송 (백엔드에서 자동으로 저장 + 브로드캐스트)
+        console.log('📋 실제 전송 데이터:', JSON.stringify(messageRequest))
+        
+        // STOMP로 메시지 전송
         this.stompClient.publish({
           destination: `/app/chat.sendMessage/${this.currentGameId}`,
           body: JSON.stringify(messageRequest)
@@ -294,7 +316,7 @@ export const useChatStore = defineStore('chat', {
           content: content.trim(),
           timestamp: new Date(),
           team: targetTeam,
-          messageType: 'TEXT'
+          type: 'TEXT'
         }
         this.addMessage(localMessage)
       }
@@ -304,31 +326,55 @@ export const useChatStore = defineStore('chat', {
     formatMessage(apiMessage) {
       return {
         id: apiMessage.messageId || apiMessage.id || Date.now(),
-        nickname: apiMessage.user?.nickname || apiMessage.nickname || '익명',
-        content: apiMessage.messageContent || apiMessage.content,
-        timestamp: new Date(apiMessage.createdAt || apiMessage.timestamp),
-        team: apiMessage.team || 'home',
-        messageType: apiMessage.messageType || 'TEXT',
-        profileImage: apiMessage.user?.profileImageUrl
+        nickname: apiMessage.nickname || '익명',
+        content: apiMessage.content, // 백엔드 응답 구조에 맞춤
+        timestamp: new Date(apiMessage.createdAt || apiMessage.timestamp || new Date()),
+        team: this.getTeamByTeamId(apiMessage.teamId), // teamId → team 변환
+        messageType: apiMessage.type || 'TEXT', // type → messageType
+        profileImage: apiMessage.profileImageUrl
       }
     },
 
-    // ✅ 9. 메시지 추가 (로컬 상태 업데이트)
-    addMessage(message) {
-      const formattedMessage = message.messageId ? this.formatMessage(message) : message
-      
-      console.log('📝 메시지 추가:', formattedMessage)
+    // 🆕 TeamId를 team으로 변환하는 헬퍼 함수
+    getTeamByTeamId(teamId) {
+      // TODO: 실제 팀 매핑 로직 (현재는 간단하게)
+      return teamId === 1 ? 'home' : 'away'
+    },
 
-      if (formattedMessage.team === 'home') {
-        this.homeMessages.push(formattedMessage)
-        if (this.homeMessages.length > 100) {
-          this.homeMessages = this.homeMessages.slice(-100)
+    // ✅ 9. 메시지 추가 (Vue 반응성 보장) - 수정
+    addMessage(message) {
+      try {
+        const formattedMessage = message.userId ? this.formatMessage(message) : message
+        
+        console.log('📝 메시지 추가 시도:', formattedMessage)
+        console.log('🎯 팀 정보:', formattedMessage.team)
+
+        if (formattedMessage.team === 'home') {
+          // ✅ Vue 반응성을 위해 새 배열로 교체
+          this.homeMessages = [...this.homeMessages, formattedMessage]
+          if (this.homeMessages.length > 100) {
+            this.homeMessages = this.homeMessages.slice(-100)
+          }
+          console.log('🏠 홈팀 메시지 추가됨. 총', this.homeMessages.length, '개')
+        } else if (formattedMessage.team === 'away') {
+          // ✅ Vue 반응성을 위해 새 배열로 교체
+          this.awayMessages = [...this.awayMessages, formattedMessage]
+          if (this.awayMessages.length > 100) {
+            this.awayMessages = this.awayMessages.slice(-100)
+          }
+          console.log('✈️ 원정팀 메시지 추가됨. 총', this.awayMessages.length, '개')
+        } else {
+          console.warn('⚠️ 알 수 없는 팀:', formattedMessage.team)
         }
-      } else if (formattedMessage.team === 'away') {
-        this.awayMessages.push(formattedMessage)
-        if (this.awayMessages.length > 100) {
-          this.awayMessages = this.awayMessages.slice(-100)
-        }
+        
+        console.log('📊 현재 메시지 현황:', {
+          home: this.homeMessages.length,
+          away: this.awayMessages.length,
+          total: this.getAllMessages.length
+        })
+        
+      } catch (error) {
+        console.error('❌ 메시지 추가 실패:', error)
       }
     },
 
