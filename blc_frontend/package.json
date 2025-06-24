@@ -10,9 +10,11 @@
     "format": "prettier --write \"src/**/*.{js,vue,json,css,scss,md}\""
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.1.1",
     "axios": "^1.10.0",
     "pinia": "^2.1.0",
     "socket.io-client": "^4.7.0",
+    "sockjs-client": "^1.6.1",
     "vue": "^3.3.0",
     "vue-router": "^4.2.0"
   },

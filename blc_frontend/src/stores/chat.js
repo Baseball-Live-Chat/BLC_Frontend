@@ -1,6 +1,8 @@
-// src/stores/chat.js
+// src/stores/chat.js - STOMP 방식으로 수정
 import { defineStore } from 'pinia'
 import http from '@/lib/http'
+import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'  // SockJS import 추가
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
@@ -10,22 +12,23 @@ export const useChatStore = defineStore('chat', {
     connected: false,
     currentGameId: null,
     currentGame: null,
-    socket: null,
-    selectedTeam: null, // 'home' 또는 'away'
-    messageInterval: null,
+    stompClient: null, // STOMP 클라이언트
+    selectedTeam: null,
     chatRooms: [],
     roomsLoading: false,
     roomsError: null,
-    gameDetails: {}, // { [gameId]: GameDetailInfo }
+    gameDetails: {},
     detailsLoading: false,
     detailsError: null,
+    messagesLoading: false,
+    messagesError: null,
+    currentRoomId: null,
   }),
 
   getters: {
     getHomeMessages: state => state.homeMessages,
     getAwayMessages: state => state.awayMessages,
     getAllMessages: state => {
-      // 시간순으로 정렬된 전체 메시지 (team 속성 포함)
       const allMessages = [
         ...state.homeMessages.map(msg => ({ ...msg, team: 'home' })),
         ...state.awayMessages.map(msg => ({ ...msg, team: 'away' })),
@@ -38,14 +41,13 @@ export const useChatStore = defineStore('chat', {
     isConnected: state => state.connected,
     getSelectedTeam: state => state.selectedTeam,
     getCurrentGame: state => state.currentGame,
-    // chatRooms와 gameDetails를 합쳐서 각 원소에 gameDetail 속성 붙인 배열
     roomsWithDetails: state =>
       state.chatRooms
         .map(room => ({
           ...room,
-          game: state.gameDetails[room.gameId], // GameDetailInfo
+          game: state.gameDetails[room.gameId],
         }))
-        .filter(item => item.game), // 상세 없는 건 제외
+        .filter(item => item.game),
   },
 
   actions: {
@@ -64,20 +66,12 @@ export const useChatStore = defineStore('chat', {
         console.error('❌ 채팅방 목록 조회 실패:', err)
         this.roomsError = err.response?.data?.message || err.message
         
-        // 🚨 API 실패 시 임시 더미 데이터 (개발 중에만)
-        console.log('⚠️ API 실패로 더미 채팅방 데이터 사용')
+        // 폴백 더미 데이터
         this.chatRooms = [
           {
             roomId: 1,
             gameId: 1,
-            roomName: "두산 vs LG 경기 채팅",
-            isActive: true,
-            maxParticipants: 10000
-          },
-          {
-            roomId: 2,
-            gameId: 2,
-            roomName: "삼성 vs 기아 경기 채팅",
+            roomName: "키움 vs 두산 경기 채팅",
             isActive: true,
             maxParticipants: 10000
           }
@@ -87,7 +81,7 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // ✅ 2. 특정 경기 상세 조회 (Game API 호출)
+    // ✅ 2. 특정 경기 상세 조회
     async fetchGameDetail(gameId) {
       try {
         console.log('🔍 경기 상세 조회 시도:', gameId)
@@ -99,13 +93,14 @@ export const useChatStore = defineStore('chat', {
       } catch (e) {
         console.error(`❌ 게임 상세 조회 실패: ${gameId}`, e)
         
-        // 🚨 API 실패 시 임시 더미 데이터
         this.gameDetails[gameId] = {
           gameId: gameId,
-          homeTeam: { teamName: "홈팀", teamCode: "HOME" },
-          awayTeam: { teamName: "원정팀", teamCode: "AWAY" },
-          stadium: "미정",
-          gameDate: new Date().toISOString()
+          homeTeamName: "키움 히어로즈",
+          awayTeamName: "두산 베어스",
+          homeCode: "키움",
+          awayCode: "두산",
+          stadium: "잠실야구장",
+          gameDateTime: new Date().toISOString()
         }
         throw e
       }
@@ -117,10 +112,8 @@ export const useChatStore = defineStore('chat', {
       this.detailsError = null
       
       try {
-        // 1단계: 채팅방 목록 조회
         await this.fetchChatRooms()
         
-        // 2단계: 각 채팅방의 경기 상세 정보를 병렬로 조회
         console.log('🔄 경기 상세 정보 병렬 조회 시작')
         await Promise.all(
           this.chatRooms.map(room => this.fetchGameDetail(room.gameId))
@@ -135,186 +128,238 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // 🔄 기존 connectToGame 메소드는 일단 유지 (소켓 연결 전까지)
-    connectToGame(gameId, gameData) {
-      console.log('🎮 게임 연결:', gameId, gameData)
+    // 🆕 4. 채팅방 메시지 기록 조회
+    async loadChatHistory(roomId) {
+      this.messagesLoading = true
+      this.messagesError = null
+      
+      try {
+        console.log('📜 채팅 기록 조회:', roomId)
+        
+        const response = await http.get(`/api/chats/rooms/${roomId}`)
+        const messages = response.data || []
+        
+        console.log('✅ 채팅 기록 로드 완료:', messages.length, '개 메시지')
+        
+        // 메시지 초기화 후 추가
+        this.homeMessages = []
+        this.awayMessages = []
+        
+        messages.forEach(apiMessage => {
+          const message = this.formatMessage(apiMessage)
+          if (message.team === 'home') {
+            this.homeMessages.push(message)
+          } else if (message.team === 'away') {
+            this.awayMessages.push(message)
+          }
+        })
+        
+      } catch (error) {
+        console.error('❌ 채팅 기록 로드 실패:', error)
+        this.messagesError = error.response?.data?.message || error.message
+        
+        this.homeMessages = []
+        this.awayMessages = []
+      } finally {
+        this.messagesLoading = false
+      }
+    },
+
+    // 🆕 5. 게임 채팅방 연결 (기존 메시지 + STOMP 연결)
+    async connectToGame(gameId, gameData) {
+      console.log('🎮 게임 연결 시작:', gameId, gameData?.homeTeamName, 'vs', gameData?.awayTeamName)
       
       this.currentGameId = gameId
       this.currentGame = gameData
-      this.connected = true
-
-      // TODO: 실제 WebSocket 연결 (2단계에서 구현)
-      // this.socket = io(`/game-${gameId}`)
-      // this.socket.on('newMessage', this.addMessage)
-      // this.socket.on('participantCount', this.setParticipants)
-
-      // 🧹 기존 메시지 초기화
-      this.homeMessages = []
-      this.awayMessages = []
-
-      // ⚠️ 임시 데이터 로드 (2단계에서 삭제 예정)
-      this.loadInitialMessages(gameId)
-      this.participants = Math.floor(Math.random() * 1000) + 500
-
-      // ⚠️ 임시 실시간 메시지 시뮬레이션 (2단계에서 삭제 예정)
-      this.startMessageSimulation()
+      
+      // roomId 찾기
+      const room = this.chatRooms.find(r => r.gameId == gameId)
+      this.currentRoomId = room?.roomId || gameId
+      
+      try {
+        // 1단계: 기존 메시지 기록 로드
+        await this.loadChatHistory(this.currentRoomId)
+        
+        // 2단계: STOMP 연결
+        await this.connectStomp()
+        
+        console.log('✅ 게임 연결 완료')
+        
+      } catch (error) {
+        console.error('❌ 게임 연결 실패:', error)
+      }
     },
 
-    disconnect() {
-      console.log('🔌 연결 해제')
-      
-      if (this.socket) {
-        this.socket.disconnect()
-        this.socket = null
+    // 🆕 6. STOMP 클라이언트 연결 (SockJS 방식 - 완전 수정)
+    async connectStomp() {
+      try {
+        // 기존 연결 해제
+        if (this.stompClient && this.stompClient.connected) {
+          this.stompClient.deactivate()
+        }
+        
+        console.log('🔌 STOMP 연결 시도 (SockJS 방식):', 'http://localhost:8080/chat-socket')
+        
+        // SockJS 인스턴스 생성
+        const socket = new SockJS('http://localhost:8080/chat-socket')
+        
+        // STOMP 클라이언트 생성 (SockJS 사용)
+        this.stompClient = new Client({
+          webSocketFactory: () => socket,
+          connectHeaders: {},
+          disconnectHeaders: {},
+          heartbeatIncoming: 4000,
+          heartbeatOutgoing: 4000,
+          reconnectDelay: 5000,
+          debug: (str) => {
+            console.log('🔧 STOMP Debug:', str)
+          }
+        })
+        
+        // 연결 성공
+        this.stompClient.onConnect = (frame) => {
+          console.log('✅ STOMP 연결 성공:', frame)
+          this.connected = true
+          
+          // 게임별 메시지 구독
+          this.stompClient.subscribe(`/topic/game/${this.currentGameId}`, (message) => {
+            console.log('📨 새 메시지 수신:', message.body)
+            const newMessage = JSON.parse(message.body)
+            this.addMessage(newMessage)
+          })
+          
+          console.log(`📡 구독 완료: /topic/game/${this.currentGameId}`)
+        }
+        
+        // 연결 실패
+        this.stompClient.onStompError = (frame) => {
+          console.error('❌ STOMP 에러:', frame.headers['message'])
+          console.error('세부사항:', frame.body)
+          this.connected = false
+        }
+        
+        // 연결 해제
+        this.stompClient.onDisconnect = () => {
+          console.log('🔌 STOMP 연결 해제')
+          this.connected = false
+        }
+        
+        // 연결 활성화
+        this.stompClient.activate()
+        
+      } catch (error) {
+        console.error('❌ STOMP 연결 실패:', error)
+        this.connected = false
       }
+    },
+
+    // 🆕 7. 메시지 전송 (STOMP 사용)
+    async sendMessage(content, team = null) {
+      const targetTeam = team || this.selectedTeam
+      if (!targetTeam || !content.trim()) {
+        console.error('팀 선택 또는 메시지 내용이 없습니다')
+        return
+      }
+
+      if (!this.stompClient || !this.connected) {
+        console.error('STOMP 연결이 없습니다')
+        return
+      }
+
+      try {
+        console.log('📤 STOMP 메시지 전송 시도:', { content, team: targetTeam, gameId: this.currentGameId })
+        
+        const messageRequest = {
+          userId: 1, // TODO: 실제 사용자 ID
+          messageContent: content.trim(),
+          messageType: 'TEXT',
+          team: targetTeam
+        }
+        
+        // STOMP로 메시지 전송 (백엔드에서 자동으로 저장 + 브로드캐스트)
+        this.stompClient.publish({
+          destination: `/app/chat.sendMessage/${this.currentGameId}`,
+          body: JSON.stringify(messageRequest)
+        })
+        
+        console.log('✅ STOMP 메시지 전송 완료')
+        
+      } catch (error) {
+        console.error('❌ 메시지 전송 실패:', error)
+        
+        // 실패 시 로컬에서라도 추가 (UX 개선)
+        const localMessage = {
+          id: Date.now(),
+          nickname: '👤나',
+          content: content.trim(),
+          timestamp: new Date(),
+          team: targetTeam,
+          messageType: 'TEXT'
+        }
+        this.addMessage(localMessage)
+      }
+    },
+
+    // 🔄 8. 메시지 포맷 변환 (백엔드 → 프론트엔드)
+    formatMessage(apiMessage) {
+      return {
+        id: apiMessage.messageId || apiMessage.id || Date.now(),
+        nickname: apiMessage.user?.nickname || apiMessage.nickname || '익명',
+        content: apiMessage.messageContent || apiMessage.content,
+        timestamp: new Date(apiMessage.createdAt || apiMessage.timestamp),
+        team: apiMessage.team || 'home',
+        messageType: apiMessage.messageType || 'TEXT',
+        profileImage: apiMessage.user?.profileImageUrl
+      }
+    },
+
+    // ✅ 9. 메시지 추가 (로컬 상태 업데이트)
+    addMessage(message) {
+      const formattedMessage = message.messageId ? this.formatMessage(message) : message
+      
+      console.log('📝 메시지 추가:', formattedMessage)
+
+      if (formattedMessage.team === 'home') {
+        this.homeMessages.push(formattedMessage)
+        if (this.homeMessages.length > 100) {
+          this.homeMessages = this.homeMessages.slice(-100)
+        }
+      } else if (formattedMessage.team === 'away') {
+        this.awayMessages.push(formattedMessage)
+        if (this.awayMessages.length > 100) {
+          this.awayMessages = this.awayMessages.slice(-100)
+        }
+      }
+    },
+
+    // ✅ 10. 연결 해제
+    disconnect() {
+      console.log('🔌 채팅 연결 해제')
+      
+      if (this.stompClient && this.stompClient.connected) {
+        this.stompClient.deactivate()
+        this.stompClient = null
+      }
+      
       this.connected = false
       this.currentGameId = null
       this.currentGame = null
+      this.currentRoomId = null
       this.homeMessages = []
       this.awayMessages = []
       this.participants = 0
       this.selectedTeam = null
-
-      // 시뮬레이션 중지
-      if (this.messageInterval) {
-        clearInterval(this.messageInterval)
-        this.messageInterval = null
-      }
     },
 
+    // ✅ 11. 팀 선택
     setSelectedTeam(team) {
       this.selectedTeam = team
-      console.log('선택된 팀:', team)
+      console.log('🎯 선택된 팀:', team)
     },
 
-    // ⚠️ 임시 메소드들 (2단계에서 삭제 예정)
-    sendMessage(content, team = null) {
-      const targetTeam = team || this.selectedTeam
-      if (!targetTeam) {
-        console.error('팀을 선택해주세요')
-        return
-      }
-
-      console.log('메시지 전송:', { content, team: targetTeam })
-
-      const message = {
-        id: Date.now(),
-        nickname: '👤나',
-        content,
-        timestamp: new Date(),
-        gameId: this.currentGameId,
-        team: targetTeam,
-      }
-
-      this.addMessage(message)
-
-      // 자동 응답 시뮬레이션 (반대팀에서 응답)
-      setTimeout(() => {
-        this.simulateAutoResponse(targetTeam)
-      }, 1000 + Math.random() * 3000)
-    },
-
-    addMessage(message) {
-      const messageData = {
-        id: message.id || Date.now(),
-        nickname: message.nickname,
-        content: message.content,
-        timestamp: message.timestamp || new Date(),
-      }
-
-      console.log('메시지 추가:', { messageData, team: message.team })
-
-      if (message.team === 'home') {
-        this.homeMessages.push(messageData)
-        if (this.homeMessages.length > 50) {
-          this.homeMessages = this.homeMessages.slice(-50)
-        }
-      } else if (message.team === 'away') {
-        this.awayMessages.push(messageData)
-        if (this.awayMessages.length > 50) {
-          this.awayMessages = this.awayMessages.slice(-50)
-        }
-      }
-    },
-
+    // ✅ 12. 참가자 수 설정
     setParticipants(count) {
       this.participants = count
-    },
-
-    // ⚠️ 이하 임시 메소드들은 2단계에서 삭제 예정
-    loadInitialMessages(gameId) {
-      // 홈팀 초기 메시지들
-      const homeInitialMessages = [
-        {
-          id: 1,
-          nickname: '⭐홈팬123',
-          content: '홈팀 화이팅! 오늘도 승리하자!',
-          timestamp: new Date(Date.now() - 300000),
-          team: 'home',
-        },
-        // ... 더 많은 더미 메시지들
-      ]
-
-      // 원정팀 초기 메시지들
-      const awayInitialMessages = [
-        {
-          id: 2,
-          nickname: '⚾원정팬456',
-          content: '원정에서도 화이팅! 역전하자!',
-          timestamp: new Date(Date.now() - 240000),
-          team: 'away',
-        },
-        // ... 더 많은 더미 메시지들
-      ]
-
-      homeInitialMessages.forEach(msg => this.addMessage(msg))
-      awayInitialMessages.forEach(msg => this.addMessage(msg))
-    },
-
-    startMessageSimulation() {
-      // 3-8초마다 랜덤 메시지 생성
-      this.messageInterval = setInterval(() => {
-        if (!this.connected) return
-
-        const teams = ['home', 'away']
-        const randomTeam = teams[Math.floor(Math.random() * teams.length)]
-        
-        const messages = [
-          '화이팅!', '좋은 플레이!', '홈런 나와라!', 
-          '수비 집중!', '끝까지 응원!', '역전하자!'
-        ]
-        const randomMessage = messages[Math.floor(Math.random() * messages.length)]
-
-        const message = {
-          id: Date.now() + Math.random(),
-          nickname: randomTeam === 'home' ? '🏠홈팬' : '✈️원정팬',
-          content: randomMessage,
-          timestamp: new Date(),
-          team: randomTeam,
-        }
-
-        this.addMessage(message)
-      }, 3000 + Math.random() * 5000)
-    },
-
-    simulateAutoResponse(originalTeam) {
-      const oppositeTeam = originalTeam === 'home' ? 'away' : 'home'
-      const responses = [
-        '우리도 화이팅!', '좋은 경기!', '응원 열심히!', 
-        '끝까지 최선을!', '파이팅!'
-      ]
-      
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-      
-      const responseMessage = {
-        id: Date.now() + Math.random(),
-        nickname: oppositeTeam === 'home' ? '🏠홈응원단' : '✈️원정응원단',
-        content: randomResponse,
-        timestamp: new Date(),
-        team: oppositeTeam,
-      }
-
-      this.addMessage(responseMessage)
     },
   },
 })

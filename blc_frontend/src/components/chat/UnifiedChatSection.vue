@@ -177,6 +177,7 @@ import { getTeamInfo } from '../../utils/teamUtils'
 import ChatMessage from './ChatMessage.vue'
 import TeamFirepowerIndicator from './TeamFirepowerIndicator.vue'
 
+
 const props = defineProps({
   gameId: {
     type: [String, Number],
@@ -193,49 +194,14 @@ const chatMessages = ref(null)
 const message = ref('')
 const selectedTeam = ref(null)
 
-// 기존처럼 홈팀과 원정팀 메시지 따로 가져오기
 const homeMessages = computed(() => chatStore.getHomeMessages)
 const awayMessages = computed(() => chatStore.getAwayMessages)
-
-// 시간순으로 정렬된 전체 메시지
-const sortedAllMessages = computed(() => {
-  const homeMessagesWithTeam = homeMessages.value.map(msg => ({
-    ...msg,
-    team: 'home',
-  }))
-
-  const awayMessagesWithTeam = awayMessages.value.map(msg => ({
-    ...msg,
-    team: 'away',
-  }))
-
-  const allMessages = [...homeMessagesWithTeam, ...awayMessagesWithTeam]
-
-  console.log('sortedAllMessages computed:', {
-    homeCount: homeMessages.value.length,
-    awayCount: awayMessages.value.length,
-    totalCount: allMessages.length,
-    messages: allMessages.map(m => `${m.team}: ${m.content}`),
-  })
-
-  return allMessages.sort(
-    (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-  )
-})
+const sortedAllMessages = computed(() => chatStore.getAllMessages)
 
 const homeTeamInfo = computed(() => getTeamInfo(props.game.homeTeam))
 const awayTeamInfo = computed(() => getTeamInfo(props.game.awayTeam))
 
-const quickMessages = computed(() => {
-  return [
-    '화이팅!',
-    '좋은 경기!',
-    '홈런!',
-    '수비 좋아!',
-    '끝까지!',
-    '응원합니다!',
-  ]
-})
+
 
 // 새로운 메시지가 추가될 때마다 스크롤을 맨 아래로
 watch(
@@ -263,16 +229,16 @@ const handleInput = event => {
   }
 }
 
-const sendMessage = () => {
+
+const sendMessage = async () => {
   if (!message.value.trim() || !selectedTeam.value) return
 
-  console.log('메시지 전송 시도:', {
-    content: message.value.trim(),
-    team: selectedTeam.value,
-  })
-
-  chatStore.sendMessage(message.value.trim(), selectedTeam.value)
-  message.value = ''
+  try {
+    await chatStore.sendMessage(message.value.trim(), selectedTeam.value)
+    message.value = '' // 전송 후 입력창 비우기
+  } catch (error) {
+    console.error('메시지 전송 실패:', error)
+  }
 }
 
 const useQuickMessage = quickMsg => {
@@ -281,10 +247,15 @@ const useQuickMessage = quickMsg => {
   }
 }
 
-onMounted(() => {
-  chatStore.connectToGame(props.gameId, props.game)
-})
 
+
+onMounted(async () => {
+  try {
+    await chatStore.connectToGame(props.gameId, props.game)
+  } catch (error) {
+    console.error('채팅방 연결 실패:', error)
+  }
+})
 onUnmounted(() => {
   chatStore.disconnect()
 })
