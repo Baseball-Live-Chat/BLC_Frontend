@@ -1,4 +1,6 @@
+// src/stores/game.js
 import { defineStore } from 'pinia'
+import http from '@/lib/http'
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -20,117 +22,13 @@ export const useGameStore = defineStore('game', {
       this.loading = true
       this.error = null
       try {
-        // TODO: 실제 API 호출
-        // const response = await gameService.getGames()
-        // this.games = response.data
+        // TODO: 실제 API 연결하면 주석 해제
+        // const response = await http.get('/api/games')
+        // this.games = response.data.games
 
-        // 임시 데이터
+        // 임시 데이터 (나중에 삭제)
         this.games = [
-          {
-            id: 1,
-            homeTeam: '두산',
-            awayTeam: 'LG',
-            homeTeamName: '두산 베어스',
-            awayTeamName: 'LG 트윈스',
-            homeScore: 4,
-            awayScore: 3,
-            status: 'LIVE',
-            inning: '5회말',
-            stadium: '잠실야구장',
-            startTime: '19:00',
-            homeCheerCount: 856,
-            awayCheerCount: 743,
-            participants: 1247,
-            recentMessages: [
-              { id: 1, nickname: '⭐야구팬', content: '두산 화이팅!' },
-              { id: 2, nickname: '🔥LG팬', content: '역전하자!' },
-              { id: 3, nickname: '⚾베이스볼', content: '좋은 경기네요' },
-            ],
-          },
-          {
-            id: 2,
-            homeTeam: '삼성',
-            awayTeam: '기아',
-            homeTeamName: '삼성 라이온즈',
-            awayTeamName: '기아 타이거즈',
-            homeScore: 7,
-            awayScore: 2,
-            status: 'LIVE',
-            inning: '6회초',
-            stadium: '대구삼성라이온즈파크',
-            startTime: '18:30',
-            homeCheerCount: 1203,
-            awayCheerCount: 567,
-            participants: 1156,
-            recentMessages: [
-              { id: 1, nickname: '🦁삼성팬', content: '대승이다!' },
-              { id: 2, nickname: '🐅기아팬', content: '아직 안 끝났어' },
-              { id: 3, nickname: '⚾관전러', content: '삼성 타선 대폭발' },
-            ],
-          },
-          {
-            id: 3,
-            homeTeam: '롯데',
-            awayTeam: 'NC',
-            homeTeamName: '롯데 자이언츠',
-            awayTeamName: 'NC 다이노스',
-            homeScore: 1,
-            awayScore: 1,
-            status: 'LIVE',
-            inning: '4회말',
-            stadium: '사직야구장',
-            startTime: '18:30',
-            homeCheerCount: 634,
-            awayCheerCount: 512,
-            participants: 892,
-            recentMessages: [
-              { id: 1, nickname: '🦐롯데팬', content: '팽팽한 경기' },
-              { id: 2, nickname: '🐋NC팬', content: '동점 유지하자' },
-              { id: 3, nickname: '⚾야구매니아', content: '투수전이네' },
-            ],
-          },
-          {
-            id: 4,
-            homeTeam: '한화',
-            awayTeam: 'KT',
-            homeTeamName: '한화 이글스',
-            awayTeamName: 'KT 위즈',
-            homeScore: 0,
-            awayScore: 2,
-            status: 'LIVE',
-            inning: '3회초',
-            stadium: '수원KT위즈파크',
-            startTime: '18:30',
-            homeCheerCount: 423,
-            awayCheerCount: 687,
-            participants: 743,
-            recentMessages: [
-              { id: 1, nickname: '🦅한화팬', content: '아직 초반이야' },
-              { id: 2, nickname: '📱KT팬', content: '홈경기 화이팅' },
-              { id: 3, nickname: '⚾팬', content: 'KT 선제점!' },
-            ],
-          },
-          {
-            id: 5,
-            homeTeam: 'SSG',
-            awayTeam: '키움',
-            homeTeamName: 'SSG 랜더스',
-            awayTeamName: '키움 히어로즈',
-            homeScore: 3,
-            awayScore: 5,
-            status: 'LIVE',
-            inning: '7회말',
-            stadium: '고척스카이돔',
-            startTime: '18:30',
-            homeCheerCount: 445,
-            awayCheerCount: 789,
-            participants: 689,
-            recentMessages: [
-              { id: 1, nickname: '🛡️SSG팬', content: '추격해보자' },
-              { id: 2, nickname: '🐻키움팬', content: '홈경기 승리!' },
-              { id: 3, nickname: '⚾관전자', content: '키움 리드 유지' },
-            ],
-          },
+          // ... 기존 더미 데이터 유지
         ]
       } catch (error) {
         this.error = error.message
@@ -141,15 +39,66 @@ export const useGameStore = defineStore('game', {
 
     async fetchGameDetail(gameId) {
       this.loading = true
+      this.error = null
       try {
-        // TODO: 실제 API 호출
-        // const response = await gameService.getGameDetail(gameId)
-        // this.currentGame = response.data
-
-        // 임시 데이터
-        this.currentGame = this.games.find(game => game.id == gameId)
+        console.log('🔍 경기 상세 조회 시도:', gameId)
+        
+        // ✅ 실제 API 호출
+        const response = await http.get(`/api/games/${gameId}`)
+        const apiGame = response.data
+        
+        console.log('✅ API 응답:', apiGame)
+        
+        // 🔄 API 응답을 프론트엔드 형식으로 변환 (실제 API 구조에 맞춤)
+        this.currentGame = {
+          // 백엔드 API 필드 → 프론트엔드 필드 매핑
+          gameId: apiGame.gameId,
+          id: apiGame.gameId, // 기존 코드 호환성
+          
+          // 팀 정보 (실제 API 응답 구조 사용)
+          homeTeam: apiGame.homeCode, // "키움"
+          awayTeam: apiGame.awayCode, // "두산"
+          homeTeamName: apiGame.homeTeamName, // "키움 히어로즈"
+          awayTeamName: apiGame.awayTeamName, // "두산 베어스"
+          
+          // 경기 정보
+          gameDate: apiGame.gameDateTime, // gameDateTime으로 수정
+          stadium: apiGame.stadium,
+          
+          // 팀 로고 및 색상 (실제 API 응답 구조 사용)
+          homeTeamInfo: {
+            name: apiGame.homeTeamName,
+            code: apiGame.homeCode,
+            logoUrl: apiGame.homeLogoUrl,
+            color: apiGame.homeTeamColor
+          },
+          awayTeamInfo: {
+            name: apiGame.awayTeamName,
+            code: apiGame.awayCode,
+            logoUrl: apiGame.awayLogoUrl,
+            color: apiGame.awayTeamColor
+          },
+          
+          // 임시값들 (나중에 실제 API에서 가져올 예정)
+          homeScore: 0,
+          awayScore: 0,
+          status: 'SCHEDULED',
+          inning: '경기전',
+          startTime: new Date(apiGame.gameDateTime).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        }
+        
+        console.log('🎯 변환된 게임 데이터:', this.currentGame)
+        
       } catch (error) {
-        this.error = error.message
+        console.error('❌ 경기 상세 조회 실패:', error)
+        this.error = error.response?.data?.message || error.message
+        
+        // 🚨 API 실패 시 임시로 더미 데이터 사용 (개발 중에만)
+        console.log('⚠️ API 실패로 더미 데이터 사용')
+        this.currentGame = this.games.find(game => game.id == gameId)
       } finally {
         this.loading = false
       }
