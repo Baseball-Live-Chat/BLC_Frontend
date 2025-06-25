@@ -8,7 +8,7 @@
 
       <!-- 사용자 정보 -->
       <div class="user-info">
-        <span class="username">{{ message.username || '익명' }}</span>
+        <span class="username">{{ message.nickname || '익명' }}</span>
         <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
       </div>
 
@@ -22,6 +22,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useAuthStore } from '../../stores/auth'
 
 const props = defineProps({
   message: {
@@ -38,10 +39,19 @@ const props = defineProps({
   },
 })
 
-// 현재 사용자의 메시지인지 확인 (실제 구현에서는 사용자 ID 비교)
+// Auth Store 접근
+const authStore = useAuthStore()
+
+// 현재 사용자의 메시지인지 확인 (익명 사용자 고려)
 const isMyMessage = computed(() => {
-  // 실제로는 현재 로그인된 사용자 ID와 메시지 작성자 ID를 비교
-  return false // 임시로 false 설정
+  // 로그인되지 않은 경우 - 익명 메시지는 모두 다른 사용자로 처리
+  if (!authStore.isAuthenticated || !authStore.user) {
+    return false
+  }
+  
+  // 로그인된 경우 - 실제 사용자 ID 비교
+  // 단, 익명 사용자(userId: 0)와는 구분
+  return props.message.userId && props.message.userId === authStore.user.userId
 })
 
 const formatTime = timestamp => {

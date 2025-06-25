@@ -1,8 +1,8 @@
-// src/stores/chat.js - STOMP 방식으로 수정
 import { defineStore } from 'pinia'
 import http from '@/lib/http'
 import { Client } from '@stomp/stompjs'
-import SockJS from 'sockjs-client'  // SockJS import 추가
+import SockJS from 'sockjs-client'
+import { useAuthStore } from './auth' // ← Auth Store import 추가
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
@@ -322,22 +322,23 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // 🔄 8. 메시지 포맷 변환 (백엔드 → 프론트엔드)
-    formatMessage(apiMessage) {
+    // 🔄 8. 메시지 포맷 변환 (백엔드 ChatMessageResponseDto → 프론트엔드)
+    formatMessage(responseDto) {
       return {
-        id: apiMessage.messageId || apiMessage.id || Date.now(),
-        nickname: apiMessage.nickname || '익명',
-        content: apiMessage.content, // 백엔드 응답 구조에 맞춤
-        timestamp: new Date(apiMessage.createdAt || apiMessage.timestamp || new Date()),
-        team: this.getTeamByTeamId(apiMessage.teamId), // teamId → team 변환
-        messageType: apiMessage.type || 'TEXT', // type → messageType
-        profileImage: apiMessage.profileImageUrl
+        id: responseDto.messageId || Date.now(),
+        nickname: responseDto.nickname || '익명',     // 백엔드에서 제공하는 nickname
+        content: responseDto.content,                // String 그대로
+        timestamp: new Date(responseDto.createdAt || new Date()),
+        team: this.getTeamByTeamId(responseDto.teamId), // Long teamId → "home"/"away" 변환
+        messageType: responseDto.type,               // MessageType enum
+        userId: responseDto.userId,                  // 사용자 ID 보존
+        profileImage: responseDto.profileImageUrl    // 프로필 이미지 (있다면)
       }
     },
 
-    // 🆕 TeamId를 team으로 변환하는 헬퍼 함수
+    // 🆕 TeamId를 team 문자열로 변환하는 헬퍼 함수
     getTeamByTeamId(teamId) {
-      // TODO: 실제 팀 매핑 로직 (현재는 간단하게)
+      // teamId 1 = home, teamId 2 = away
       return teamId === 1 ? 'home' : 'away'
     },
 
