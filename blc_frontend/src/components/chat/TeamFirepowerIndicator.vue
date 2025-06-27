@@ -58,16 +58,17 @@
 
       <!-- 원정팀 화력 -->
       <div class="team-firepower away-team">
-        <div class="team-info">
+        <!-- 원정팀 정보를 오른쪽 기준으로 배치 -->
+        <div class="team-info away-info">
+          <div class="team-details">
+            <div class="team-name">{{ awayTeam }}</div>
+            <div class="message-count">{{ awayMessageCount }}개 메시지</div>
+          </div>
           <img
             :src="awayTeamInfo.image"
             :alt="awayTeamInfo.name"
             class="team-avatar"
           />
-          <div class="team-details">
-            <div class="team-name">{{ awayTeam }}</div>
-            <div class="message-count">{{ awayMessageCount }}개 메시지</div>
-          </div>
         </div>
 
         <div class="power-bar-container">
@@ -248,6 +249,12 @@ const getFireLevelText = level => {
   margin-bottom: 12px;
 }
 
+/* 원정팀 정보를 오른쪽 기준으로 정렬 */
+.away-info {
+  justify-content: flex-end;
+  text-align: right;
+}
+
 .team-avatar {
   width: 40px;
   height: 40px;
@@ -335,10 +342,10 @@ const getFireLevelText = level => {
 }
 
 .percentage-text {
+  font-size: 0.9rem;
   font-weight: bold;
   min-width: 40px;
   text-align: center;
-  font-size: 0.9rem;
 }
 
 .vs-section {
@@ -346,13 +353,16 @@ const getFireLevelText = level => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-width: 80px;
 }
 
 .vs-text {
   font-size: 1.2rem;
   font-weight: bold;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(45deg, #ffd700, #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .battle-intensity {
@@ -364,11 +374,11 @@ const getFireLevelText = level => {
 
 .intensity-meter {
   width: 20px;
-  height: 40px;
+  height: 50px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 10px;
-  overflow: hidden;
   position: relative;
+  overflow: hidden;
 }
 
 .intensity-fill {
@@ -376,8 +386,8 @@ const getFireLevelText = level => {
   bottom: 0;
   left: 0;
   right: 0;
-  border-radius: 10px;
-  transition: height 0.5s ease;
+  border-radius: 0 0 10px 10px;
+  transition: height 0.8s ease;
 }
 
 .intensity-label {
@@ -405,14 +415,14 @@ const getFireLevelText = level => {
 .level-badges {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 15px;
   flex-wrap: wrap;
 }
 
 .level-badge {
-  padding: 6px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 4px 12px;
   border-radius: 20px;
+  border: 2px solid;
   font-size: 0.8rem;
   background: rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
@@ -421,32 +431,30 @@ const getFireLevelText = level => {
 .level-badge.active {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
-  .firepower-container {
-    padding: 15px;
-  }
-
   .firepower-battle {
     flex-direction: column;
     gap: 15px;
-  }
-
-  .vs-section {
-    order: -1;
-    flex-direction: row;
-    gap: 12px;
   }
 
   .team-firepower {
     width: 100%;
   }
 
-  .team-info {
-    justify-content: center;
+  .vs-section {
+    order: 2;
+    margin: 10px 0;
+  }
+
+  .firepower-container {
+    padding: 15px;
+  }
+
+  .firepower-header h3 {
+    font-size: 1.2rem;
   }
 
   .level-badges {
@@ -454,8 +462,8 @@ const getFireLevelText = level => {
   }
 
   .level-badge {
-    font-size: 0.7rem;
-    padding: 4px 8px;
+    font-size: 0.75rem;
+    padding: 3px 8px;
   }
 }
 </style>

@@ -12,7 +12,7 @@ export const useChatStore = defineStore('chat', {
     connected: false,
     currentGameId: null,
     currentGame: null,
-    stompClient: null, // STOMP 클라이언트
+    stompClient: null,
     selectedTeam: null,
     chatRooms: [],
     roomsLoading: false,
@@ -34,7 +34,7 @@ export const useChatStore = defineStore('chat', {
         ...state.awayMessages.map(msg => ({ ...msg, team: 'away' })),
       ]
       return allMessages.sort(
-        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)  // 시간순 정렬
       )
     },
     getParticipants: state => state.participants,
@@ -272,7 +272,7 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // 🆕 7. 메시지 전송 (백엔드 DTO에 맞춤)
+    // 🆕 7. 메시지 전송 (실제 사용자 ID 사용)
     async sendMessage(content, team = null) {
       const targetTeam = team || this.selectedTeam
       if (!targetTeam || !content.trim()) {
@@ -285,15 +285,42 @@ export const useChatStore = defineStore('chat', {
         return
       }
 
+      // 🔐 Auth Store에서 사용자 정보 가져오기
+      const authStore = useAuthStore()
+      
       try {
-        console.log('📤 STOMP 메시지 전송 시도:', { content, team: targetTeam, gameId: this.currentGameId })
+        console.log('📤 STOMP 메시지 전송 시도:', { 
+          content, 
+          team: targetTeam, 
+          gameId: this.currentGameId,
+          isAuthenticated: authStore.isAuthenticated,
+          user: authStore.user
+        })
         
-        // 🔄 백엔드 DTO 구조에 맞춤
-        const messageRequest = {
-          userId: 1, // TODO: 실제 사용자 ID
-          teamId: targetTeam === 'home' ? 1 : 2, // home=1, away=2로 매핑
-          content: content.trim(), // messageContent → content
-          type: 'TEXT' // messageType → type (MessageType enum)
+        // 🔄 사용자 인증 상태에 따라 메시지 요청 데이터 구성
+        let messageRequest
+        
+        if (authStore.isAuthenticated && authStore.user) {
+          // 로그인된 사용자 - 실제 userId 사용
+          const userId = authStore.user.userId || authStore.user.id
+          const nickname = authStore.user.nickname || authStore.user.username
+          console.log('🔐 로그인된 사용자:', { userId, nickname })
+          
+          messageRequest = {
+            userId: userId,
+            teamId: targetTeam === 'home' ? 1 : 2,
+            content: content.trim(),
+            type: 'TEXT'
+          }
+        } else {
+          // 익명 사용자 - userId: 0으로 전송
+          console.log('👤 익명 사용자로 전송 (userId: 0)')
+          
+          messageRequest = {
+            teamId: targetTeam === 'home' ? 1 : 2,
+            content: content.trim(),
+            type: 'TEXT'
+          }
         }
         
         console.log('📋 실제 전송 데이터:', JSON.stringify(messageRequest))
@@ -310,13 +337,31 @@ export const useChatStore = defineStore('chat', {
         console.error('❌ 메시지 전송 실패:', error)
         
         // 실패 시 로컬에서라도 추가 (UX 개선)
-        const localMessage = {
-          id: Date.now(),
-          nickname: '👤나',
-          content: content.trim(),
-          timestamp: new Date(),
-          team: targetTeam,
-          type: 'TEXT'
+        const authStore = useAuthStore()
+        let localMessage
+        
+        if (authStore.isAuthenticated && authStore.user) {
+          // 로그인된 사용자
+          localMessage = {
+            id: Date.now(),
+            nickname: authStore.user.nickname || authStore.user.username || '나',
+            content: content.trim(),
+            timestamp: new Date(),
+            team: targetTeam,
+            type: 'TEXT',
+            userId: authStore.user.userId || authStore.user.id
+          }
+        } else {
+          // 익명 사용자 - userId: 0
+          localMessage = {
+            id: Date.now(),
+            nickname: '익명',
+            content: content.trim(),
+            timestamp: new Date(),
+            team: targetTeam,
+            type: 'TEXT',
+            userId: 0  // 익명 사용자는 0으로 설정
+          }
         }
         this.addMessage(localMessage)
       }
@@ -345,7 +390,7 @@ export const useChatStore = defineStore('chat', {
     // ✅ 9. 메시지 추가 (Vue 반응성 보장) - 수정
     addMessage(message) {
       try {
-        const formattedMessage = message.userId ? this.formatMessage(message) : message
+        const formattedMessage = this.formatMessage(message)
         
         console.log('📝 메시지 추가 시도:', formattedMessage)
         console.log('🎯 팀 정보:', formattedMessage.team)
