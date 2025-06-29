@@ -42,6 +42,19 @@
           />
         </div>
 
+        <!-- 아이디 저장 체크박스 -->
+        <div class="form-group">
+          <label class="checkbox-container">
+            <input
+              v-model="rememberUsername"
+              type="checkbox"
+              class="checkbox-input"
+            />
+            <span class="checkbox-checkmark"></span>
+            <span class="checkbox-label">아이디 저장</span>
+          </label>
+        </div>
+
         <!-- 에러 메시지 -->
         <div v-if="authStore.error" class="error-message">
           <span class="error-icon">⚠️</span>
@@ -83,20 +96,52 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 const router = useRouter()
 
+// 🔑 로컬 스토리지 키
+const SAVED_USERNAME_KEY = 'saved_username'
+const REMEMBER_USERNAME_KEY = 'remember_username'
+
 // 📝 폼 데이터
 const loginForm = ref({
   username: '',
   password: '',
 })
 
+// 💾 아이디 저장 체크박스
+const rememberUsername = ref(false)
+
 // 🧮 계산된 속성
 const isFormValid = computed(() => {
   return loginForm.value.username.trim() && loginForm.value.password.trim()
 })
 
+// 💾 아이디 저장 함수
+const saveUsername = () => {
+  if (rememberUsername.value && loginForm.value.username.trim()) {
+    localStorage.setItem(SAVED_USERNAME_KEY, loginForm.value.username.trim())
+    localStorage.setItem(REMEMBER_USERNAME_KEY, 'true')
+  } else {
+    localStorage.removeItem(SAVED_USERNAME_KEY)
+    localStorage.removeItem(REMEMBER_USERNAME_KEY)
+  }
+}
+
+// 📖 저장된 아이디 불러오기
+const loadSavedUsername = () => {
+  const savedUsername = localStorage.getItem(SAVED_USERNAME_KEY)
+  const shouldRemember = localStorage.getItem(REMEMBER_USERNAME_KEY) === 'true'
+  
+  if (savedUsername && shouldRemember) {
+    loginForm.value.username = savedUsername
+    rememberUsername.value = true
+  }
+}
+
 // ⚡ 메서드
 const handleLogin = async () => {
   authStore.clearError()
+
+  // 아이디 저장 처리
+  saveUsername()
 
   const success = await authStore.login({
     username: loginForm.value.username.trim(),
@@ -108,8 +153,11 @@ const handleLogin = async () => {
     const redirect = router.currentRoute.value.query.redirect || '/'
     await router.push(redirect)
 
-    // 폼 초기화
-    loginForm.value = { username: '', password: '' }
+    // 비밀번호만 초기화 (아이디는 저장 설정에 따라)
+    if (!rememberUsername.value) {
+      loginForm.value.username = ''
+    }
+    loginForm.value.password = ''
   }
 }
 
@@ -119,6 +167,9 @@ onMounted(() => {
   if (authStore.isAuthenticated) {
     router.push('/')
   }
+
+  // 저장된 아이디 불러오기
+  loadSavedUsername()
 })
 </script>
 
@@ -227,6 +278,60 @@ onMounted(() => {
   opacity: 0.7;
 }
 
+/* 체크박스 */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  color: #374151;
+  margin-top: 4px;
+}
+
+.checkbox-input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkbox-checkmark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  margin-right: 8px;
+  transition: all 0.2s ease;
+}
+
+.checkbox-checkmark::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.checkbox-input:checked + .checkbox-checkmark {
+  background-color: #2c5aa0;
+  border-color: #2c5aa0;
+}
+
+.checkbox-input:checked + .checkbox-checkmark::after {
+  opacity: 1;
+}
+
+.checkbox-label {
+  font-weight: 500;
+}
+
 /* 에러 메시지 */
 .error-message {
   display: flex;
@@ -249,27 +354,29 @@ onMounted(() => {
   background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%);
   color: white;
   border: none;
-  padding: 14px 20px;
+  padding: 16px 24px;
   border-radius: 10px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(44, 90, 160, 0.3);
   margin-top: 8px;
-  position: relative;
-  overflow: hidden;
 }
 
 .submit-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(44, 90, 160, 0.3);
+  box-shadow: 0 6px 20px rgba(44, 90, 160, 0.4);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .submit-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
 }
 
 .button-loading {
@@ -289,30 +396,29 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* 푸터 */
 .form-footer {
-  margin-top: 24px;
   text-align: center;
-  padding-top: 20px;
-  border-top: 1px solid #e1e8f0;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
 }
 
 .footer-text {
-  color: #666;
-  margin: 0;
+  color: #6b7280;
   font-size: 14px;
+  margin: 0;
 }
 
 .footer-link {
   color: #2c5aa0;
   text-decoration: none;
   font-weight: 600;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 }
 
 .footer-link:hover {
@@ -320,18 +426,27 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-/* 📱 모바일 반응형 */
+/* 반응형 */
 @media (max-width: 480px) {
   .login-container {
     padding: 16px;
   }
-
+  
   .login-form {
-    padding: 32px 24px;
+    padding: 24px;
   }
-
+  
   .brand-title {
     font-size: 24px;
+  }
+  
+  .form-input {
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+  
+  .submit-button {
+    padding: 14px 20px;
   }
 }
 </style>
