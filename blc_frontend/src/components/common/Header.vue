@@ -24,19 +24,19 @@
       <!-- 🧭 네비게이션 메뉴 -->
       <nav class="header-nav" :class="{ active: isMobileMenuOpen }">
         <div class="nav-links">
-          <router-link to="/" class="nav-link" @click="closeMobileMenu">
+          <!-- <router-link to="/" class="nav-link" @click="closeMobileMenu">
             🏟️ 경기장
-          </router-link>
+          </router-link> 추후 추가 예정-->
 
           <!-- 로그인된 사용자만 볼 수 있는 메뉴 -->
           <template v-if="authStore.isAuthenticated">
-            <router-link
+            <!-- <router-link
               to="/my-games"
               class="nav-link"
               @click="closeMobileMenu"
             >
               🎯 내 경기
-            </router-link>
+            </router-link> 추후 추가 예정 -->
           </template>
         </div>
 
@@ -69,13 +69,13 @@
               >
                 👤 프로필
               </router-link>
-              <router-link
+              <!-- <router-link
                 to="/settings"
                 class="dropdown-item"
                 @click="closeUserMenu"
               >
                 ⚙️ 설정
-              </router-link>
+              </router-link> 추후 추가 예정-->
               <div class="dropdown-divider"></div>
               <button class="dropdown-item logout-btn" @click="handleLogout">
                 🚪 로그아웃

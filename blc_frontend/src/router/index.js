@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import GameDetail from '../views/GameDetail.vue'
 import LoginForm from '@/components/auth/LoginForm.vue'
 import RegisterForm from '@/components/auth/RegisterForm.vue'
+import ProfileView from '@/views/ProfileView.vue'
 
 const routes = [
   {
@@ -34,6 +35,9 @@ const routes = [
       requiresGuest: true,
     },
   },
+  { path: '/profile', 
+    name: 'Profile', 
+    component: ProfileView }
 ]
 
 const router = createRouter({
