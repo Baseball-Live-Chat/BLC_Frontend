@@ -153,11 +153,13 @@ const handleLogin = async () => {
     const redirect = router.currentRoute.value.query.redirect || '/'
     await router.push(redirect)
 
-    // 비밀번호만 초기화 (아이디는 저장 설정에 따라)
-    if (!rememberUsername.value) {
-      loginForm.value.username = ''
+    // 폼 초기화
+    loginForm.value = { username: '', password: '' }
+  } else {
+    // 로그인 실패 시 URL에서 redirect 파라미터 제거
+    if (router.currentRoute.value.query.redirect) {
+      await router.replace('/login')
     }
-    loginForm.value.password = ''
   }
 }
 

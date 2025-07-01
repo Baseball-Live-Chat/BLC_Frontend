@@ -1,10 +1,16 @@
 // src/lib/http.js
 import axios from 'axios'
 
-// Vue CLI 환경에서는 process.env.VUE_APP_* 로 접근
 const BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080'
+const BASE_SOCKET_URL = process.env.VUE_APP_SOCKET_URL || 'http://localhost:8080'
 
-export default axios.create({
+// axios 인스턴스 생성
+const httpClient = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
 })
+
+// Socket URL을 별도 export
+export const socketURL = BASE_SOCKET_URL
+
+export default httpClient

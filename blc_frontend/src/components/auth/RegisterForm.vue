@@ -156,16 +156,16 @@
             class="form-select"
           >
             <option value="">팀을 선택하세요</option>
-            <option value="1">LG 트윈스</option>
-            <option value="2">KT 위즈</option>
-            <option value="3">SSG 랜더스</option>
-            <option value="4">NC 다이노스</option>
-            <option value="5">두산 베어스</option>
-            <option value="6">KIA 타이거즈</option>
-            <option value="7">롯데 자이언츠</option>
-            <option value="8">삼성 라이온즈</option>
-            <option value="9">한화 이글스</option>
-            <option value="10">키움 히어로즈</option>
+            <option value="1">키움 히어로즈</option>
+            <option value="2">두산 베어스</option>
+            <option value="3">롯데 자이언츠</option>
+            <option value="4">SSG 랜더스</option>
+            <option value="5">KT 위즈</option>
+            <option value="6">삼성 라이온즈</option>
+            <option value="7">KIA 타이거즈</option>
+            <option value="8">NC 다이노스</option>
+            <option value="9">LG 트윈스</option>
+            <option value="10">한화 이글스</option> 
           </select>
         </div>
 
