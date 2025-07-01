@@ -1,8 +1,5 @@
 <template>
   <div class="container">
-    <!-- 인기 순위 섹션 -->
-    <RankingSection :rankings="rankings" />
-
     <!-- 경기 카드 섹션 -->
     <div class="games-section">
       <h2 class="games-title">🔥 진행 중인 경기</h2>

@@ -1,19 +1,31 @@
 <template>
-  <div class="chat-message" :class="{ 'my-message': isMyMessage }">
+  <div 
+    class="chat-message" 
+    :class="{ 
+      'home-team': message.team === 'home',
+      'away-team': message.team === 'away',
+      'my-message': isMyMessage 
+    }"
+  >
     <div class="message-container">
-      <!-- 팀 배지 -->
-      <div class="team-badge" :style="{ backgroundColor: teamColor }">
-        {{ teamName }}
-      </div>
-
-      <!-- 사용자 정보 -->
-      <div class="user-info">
-        <span class="username">{{ message.nickname || '익명' }}</span>
-        <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
+      <!-- 팀 배지와 사용자 정보를 가로로 배치 -->
+      <div class="message-header">
+        <div class="team-badge" :style="{ backgroundColor: teamColor }">
+          {{ teamName }}
+        </div>
+        <div class="user-info">
+          <span class="username">{{ message.nickname || '익명' }}</span>
+        </div>
       </div>
 
       <!-- 메시지 내용 -->
-      <div class="message-content" :style="{ borderLeftColor: teamColor }">
+      <div 
+        class="message-content" 
+        :style="{ 
+          borderLeftColor: message.team === 'home' ? teamColor : 'transparent',
+          borderRightColor: message.team === 'away' ? teamColor : 'transparent'
+        }"
+      >
         {{ message.content }}
       </div>
     </div>
@@ -55,27 +67,8 @@ const isMyMessage = computed(() => {
 })
 
 const formatTime = timestamp => {
-  if (!timestamp) return ''
-
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diffInHours = (now - date) / (1000 * 60 * 60)
-
-  if (diffInHours < 24) {
-    // 24시간 이내면 시간만 표시
-    return date.toLocaleTimeString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } else {
-    // 24시간 이후면 날짜와 시간 표시
-    return date.toLocaleDateString('ko-KR', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+  // 날짜 표기 제거 - 백엔드에서 날짜가 오지 않음
+  return ''
 }
 </script>
 
@@ -83,79 +76,120 @@ const formatTime = timestamp => {
 .chat-message {
   margin-bottom: 12px;
   animation: fadeInUp 0.3s ease-out;
+  display: flex;
+  width: 100%;
 }
 
-.chat-message.my-message .message-container {
-  margin-left: auto;
-  max-width: 80%;
+/* 🏠 홈팀 메시지 - 왼쪽 정렬 */
+.chat-message.home-team {
+  justify-content: flex-start;
 }
 
-.chat-message.my-message .team-badge {
-  margin-left: auto;
+.chat-message.home-team .message-header {
+  justify-content: flex-start;
 }
 
-.chat-message.my-message .user-info {
+.chat-message.away-team .message-header {
+  justify-content: flex-end;
+}
+
+.chat-message.home-team .message-container {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.chat-message.home-team .message-content {
+  background: #f8f9fa;
+  border-left: 4px solid;
+  border-right: none;
+  border-radius: 8px 18px 18px 8px;
+}
+
+/* ✈️ 원정팀 메시지 - 오른쪽 정렬 */
+.chat-message.away-team {
+  justify-content: flex-end;
+}
+
+.chat-message.away-team .message-container {
+  align-items: flex-end;
   text-align: right;
 }
 
+.chat-message.away-team .message-content {
+  background: #f8f9fa;
+  border-right: 4px solid;
+  border-left: none;
+  border-radius: 18px 8px 8px 18px;
+}
+
+/* 👤 내 메시지 - 추가 스타일링 */
 .chat-message.my-message .message-content {
-  background: #e3f2fd;
-  border-left: 4px solid #2196f3;
+  background: #e3f2fd !important;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chat-message.my-message .username {
+  font-weight: bold;
+  color: #1976d2;
+}
+
+/* 메시지 헤더 (팀 배지 + 사용자 정보) */
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .message-container {
-  max-width: 85%;
+  max-width: 75%;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  animation: slideIn 0.3s ease-out;
 }
 
 .team-badge {
   display: inline-block;
   color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: bold;
-  text-align: center;
-  width: fit-content;
-  max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 2px;
+  font-size: 0.8rem;
+  color: #666;
 }
 
 .username {
   font-weight: 600;
   color: #333;
-  font-size: 0.85rem;
-}
-
-.timestamp {
-  font-size: 0.75rem;
-  color: #888;
 }
 
 .message-content {
-  background: #ffffff;
   padding: 10px 14px;
-  border-radius: 12px;
-  border-left: 4px solid;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  font-size: 0.95rem;
-  line-height: 1.4;
-  color: #333;
   word-wrap: break-word;
-  max-width: 100%;
+  line-height: 1.4;
+  font-size: 0.95rem;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
+.message-content:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 애니메이션 */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -167,34 +201,51 @@ const formatTime = timestamp => {
   }
 }
 
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* 모바일 반응형 */
 @media (max-width: 768px) {
   .message-container {
-    max-width: 95%;
+    max-width: 85%;
   }
-
-  .chat-message.my-message .message-container {
-    max-width: 90%;
-  }
-
-  .team-badge {
-    font-size: 0.65rem;
-    padding: 1px 6px;
-    max-width: 70px;
-  }
-
-  .username {
-    font-size: 0.8rem;
-  }
-
-  .timestamp {
-    font-size: 0.7rem;
-  }
-
+  
   .message-content {
-    padding: 8px 12px;
     font-size: 0.9rem;
-    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  
+  .team-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+  }
+  
+  .user-info {
+    font-size: 0.75rem;
   }
 }
+
+/* 접근성 개선 */
+@media (prefers-reduced-motion: reduce) {
+  .chat-message,
+  .message-container,
+  .message-content {
+    animation: none;
+    transition: none;
+  }
+  
+  .message-content:hover {
+    transform: none;
+  }
+}
+
+
 </style>

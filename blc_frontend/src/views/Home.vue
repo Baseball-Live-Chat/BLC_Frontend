@@ -1,7 +1,5 @@
 <template>
   <div class="container">
-    <!-- 인기 순위 섹션 -->
-    <RankingSection :rankings="rankings" />
 
     <!-- 경기 카드 섹션 -->
     <div class="games-section">
@@ -73,9 +71,13 @@ onMounted(async () => {
 }
 
 .games-list {
-  display: flex;
+  display: grid;
+  /* 3열 고정 */
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
   gap: 20px;
-  overflow-x: auto;
+  /* 가운데 정렬 옵션 (선택) */
+  justify-content: center;
+  align-content: start;
   padding: 10px 0;
 }
 
