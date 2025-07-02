@@ -98,13 +98,16 @@ onMounted(async () => {
   border-radius: 5px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .container {
     padding: 10px;
   }
 
   .games-list {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    justify-items: stretch;
   }
 }
 </style>
