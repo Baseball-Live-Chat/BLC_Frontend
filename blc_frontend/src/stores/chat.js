@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import http from '@/lib/http'
+import http, { socketURL } from '@/lib/http'  // ⭐ socketURL 추가 import
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { useAuthStore } from './auth' // ← Auth Store import 추가
@@ -212,10 +212,11 @@ export const useChatStore = defineStore('chat', {
           this.stompClient.deactivate()
         }
         
-        console.log('🔌 STOMP 연결 시도 (SockJS 방식):', 'http://localhost:8080/chat-socket')
+        const fullSocketURL = socketURL + '/chat-socket'  // ⭐ socketURL 사용
+        console.log('🔌 STOMP 연결 시도:', fullSocketURL)
         
         // SockJS 인스턴스 생성
-        const socket = new SockJS('http://localhost:8080/chat-socket')
+        const socket = new SockJS(fullSocketURL)
         
         // STOMP 클라이언트 생성 (SockJS 사용)
         this.stompClient = new Client({

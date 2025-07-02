@@ -149,15 +149,13 @@ const handleLogin = async () => {
   })
 
   if (success) {
-    // 로그인 성공 시 이전 페이지 또는 홈으로 이동
-    const redirect = router.currentRoute.value.query.redirect || '/'
-    await router.push(redirect)
-
-    // 비밀번호만 초기화 (아이디는 저장 설정에 따라)
-    if (!rememberUsername.value) {
-      loginForm.value.username = ''
-    }
-    loginForm.value.password = ''
+    // 로그인 성공하면 무조건 메인('/')으로
+    await router.push('/')
+    // 폼 초기화
+    loginForm.value = { username: '', password: '' }
+  } else {
+    // 로그인 실패 시에도 redirect 파라미터 제거
+    await router.replace('/login')
   }
 }
 
