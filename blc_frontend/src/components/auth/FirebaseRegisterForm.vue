@@ -127,6 +127,11 @@
 </template>
 
 <script setup>
+/**
+ * Firebase 회원가입 폼 컴포넌트
+ * @author HKS
+ * @description Firebase Authentication을 사용한 이메일/비밀번호 회원가입
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -143,7 +148,14 @@ const registerForm = ref({
   passwordConfirm: '',
 })
 
-// 🧮 계산된 속성
+// 🧮 계산된 속성 및 유효성 검사
+const isEmailValid = computed(() => {
+  const email = registerForm.value.email
+  if (!email) return true
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+})
+
 const isDisplayNameValid = computed(() => {
   const displayName = registerForm.value.displayName
   if (!displayName) return true
@@ -168,14 +180,17 @@ const passwordStrength = computed(() => {
 })
 
 const isFormValid = computed(() => {
+  const { email, displayName, password, passwordConfirm } = registerForm.value
+  
   return (
-    registerForm.value.email.trim() &&
-    registerForm.value.displayName.trim() &&
-    registerForm.value.password.trim() &&
-    registerForm.value.passwordConfirm.trim() &&
+    email.trim() &&
+    displayName.trim() &&
+    password.trim() &&
+    passwordConfirm.trim() &&
+    isEmailValid.value &&
     isDisplayNameValid.value &&
     passwordsMatch.value &&
-    registerForm.value.password.length >= 6
+    password.length >= 6
   )
 })
 
