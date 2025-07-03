@@ -1,9 +1,16 @@
-// src/stores/auth.js
+/**
+ * Firebase Authentication Store
+ * @author HKS
+ * @description Firebase를 사용한 사용자 인증 상태 관리
+ */
 import { defineStore } from 'pinia'
 import { ref, computed, onUnmounted } from 'vue'
 import { firebaseAuthService } from '@/services/firebaseAuthService'
 
-export const useAuthStore = defineStore('auth', () => {
+// 상수 정의
+const STORE_ID = 'auth'
+
+export const useAuthStore = defineStore(STORE_ID, () => {
   // 📊 상태 (State)
   const user = ref(null)
   const isLoading = ref(false)
@@ -12,10 +19,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 🧮 계산된 값 (Getters)
   const isAuthenticated = computed(() => !!user.value)
-  const userNickname = computed(() => user.value?.displayName || user.value?.email || '익명')
+  const userNickname = computed(() => user.value?.displayName || user.value?.email?.split('@')[0] || '익명')
   const userEmail = computed(() => user.value?.email || '')
   const userAvatar = computed(() => user.value?.photoURL || null)
   const userId = computed(() => user.value?.uid || null)
+  
+  // 사용자 정보가 완전한지 확인
+  const isUserProfileComplete = computed(() => {
+    return user.value && user.value.displayName && user.value.email
+  })
 
   // ⚡ 액션 (Actions)
 
@@ -106,18 +118,27 @@ export const useAuthStore = defineStore('auth', () => {
    * 🏁 Firebase 인증 상태 리스너 초기화
    */
   const initializeAuth = () => {
+    // 초기 로딩 상태 설정
+    isLoading.value = true
+    
     // Firebase 인증 상태 변화 감지
     unsubscribe = firebaseAuthService.onAuthStateChanged((firebaseUser) => {
-      if (firebaseUser) {
-        // 로그인됨
-        user.value = firebaseUser
-        console.log('✅ Firebase 사용자 인증됨:', firebaseUser.email)
-      } else {
-        // 로그아웃됨
-        user.value = null
-        console.log('ℹ️ Firebase 사용자 로그아웃됨')
+      try {
+        if (firebaseUser) {
+          // 로그인됨
+          user.value = firebaseUser
+          console.log('✅ Firebase 사용자 인증됨:', firebaseUser.email)
+        } else {
+          // 로그아웃됨
+          user.value = null
+          console.log('ℹ️ Firebase 사용자 로그아웃됨')
+        }
+      } catch (error) {
+        console.error('❌ 인증 상태 처리 오류:', error)
+        error.value = '인증 상태 확인 중 오류가 발생했습니다.'
+      } finally {
+        isLoading.value = false
       }
-      isLoading.value = false
     })
   }
 
@@ -156,6 +177,7 @@ export const useAuthStore = defineStore('auth', () => {
     userEmail,
     userAvatar,
     userId,
+    isUserProfileComplete,
 
     // Actions
     loginWithEmail,

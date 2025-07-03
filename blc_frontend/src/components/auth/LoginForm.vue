@@ -88,6 +88,11 @@
 </template>
 
 <script setup>
+/**
+ * Firebase 로그인 폼 컴포넌트
+ * @author HKS
+ * @description Firebase Authentication을 사용한 이메일/비밀번호 로그인
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -96,9 +101,9 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 const router = useRouter()
 
-// 🔑 로컬 스토리지 키
-const SAVED_EMAIL_KEY = 'saved_email'
-const REMEMBER_EMAIL_KEY = 'remember_email'
+// 🔑 로컬 스토리지 키 상수
+const SAVED_EMAIL_KEY = 'blc_saved_email'
+const REMEMBER_EMAIL_KEY = 'blc_remember_email'
 
 // 📝 폼 데이터
 const loginForm = ref({
@@ -111,8 +116,15 @@ const rememberEmail = ref(false)
 
 // 🧮 계산된 속성
 const isFormValid = computed(() => {
-  return loginForm.value.email.trim() && loginForm.value.password.trim()
+  const { email, password } = loginForm.value
+  return email.trim() && password.trim() && isValidEmail(email)
 })
+
+// 이메일 유효성 검사
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
 
 // 💾 이메일 저장 함수
 const saveEmail = () => {

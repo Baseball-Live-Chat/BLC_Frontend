@@ -1,4 +1,8 @@
-// src/services/firebaseAuthService.js
+/**
+ * Firebase Authentication 서비스
+ * @author HKS
+ * @description Firebase Auth를 사용한 사용자 인증 관리
+ */
 import { 
   auth,
   createUserWithEmailAndPassword,
@@ -7,6 +11,20 @@ import {
   onAuthStateChanged,
   updateProfile
 } from './firebase'
+
+// 인증 오류 메시지 매핑
+const AUTH_ERROR_MESSAGES = {
+  'auth/user-not-found': '등록되지 않은 이메일입니다.',
+  'auth/wrong-password': '비밀번호가 올바르지 않습니다.',
+  'auth/email-already-in-use': '이미 사용 중인 이메일입니다.',
+  'auth/weak-password': '비밀번호는 최소 6자리 이상이어야 합니다.',
+  'auth/invalid-email': '유효하지 않은 이메일 형식입니다.',
+  'auth/too-many-requests': '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
+  'auth/network-request-failed': '네트워크 오류가 발생했습니다.',
+  'auth/invalid-credential': '로그인 정보가 올바르지 않습니다.',
+  'auth/user-disabled': '비활성화된 계정입니다.',
+  'auth/operation-not-allowed': '허용되지 않은 작업입니다.'
+}
 
 export const firebaseAuthService = {
   /**
@@ -97,21 +115,26 @@ export const firebaseAuthService = {
 
   /**
    * 🔧 에러 메시지 변환
+   * @param {string} errorCode - Firebase 에러 코드
+   * @returns {string} 사용자 친화적인 에러 메시지
    */
   getErrorMessage(errorCode) {
-    const errorMessages = {
-      'auth/user-not-found': '등록되지 않은 이메일입니다.',
-      'auth/wrong-password': '비밀번호가 올바르지 않습니다.',
-      'auth/email-already-in-use': '이미 사용 중인 이메일입니다.',
-      'auth/weak-password': '비밀번호는 최소 6자리 이상이어야 합니다.',
-      'auth/invalid-email': '유효하지 않은 이메일 형식입니다.',
-      'auth/too-many-requests': '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
-      'auth/network-request-failed': '네트워크 오류가 발생했습니다.',
-      'auth/invalid-credential': '로그인 정보가 올바르지 않습니다.',
-      'auth/user-disabled': '비활성화된 계정입니다.',
-      'auth/operation-not-allowed': '허용되지 않은 작업입니다.'
-    }
-    
-    return errorMessages[errorCode] || '알 수 없는 오류가 발생했습니다.'
+    return AUTH_ERROR_MESSAGES[errorCode] || '알 수 없는 오류가 발생했습니다.'
+  },
+
+  /**
+   * 🔍 사용자 인증 상태 확인
+   * @returns {boolean} 인증 여부
+   */
+  isAuthenticated() {
+    return !!auth.currentUser
+  },
+
+  /**
+   * 📧 현재 사용자 이메일 가져오기
+   * @returns {string|null} 사용자 이메일
+   */
+  getCurrentUserEmail() {
+    return auth.currentUser?.email || null
   }
 }
