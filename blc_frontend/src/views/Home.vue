@@ -94,13 +94,6 @@ chatStore.onReconnected(async () => {
    await chatStore.fetchCounts(roomIds)
  })
 
-onBeforeUnmount(() => {
-  // 델타 구독 해제
-  chatStore.disconnectCountDeltaSubscriptions()
-
-  // 재연결 리스너 해제
-  chatStore.offReconnected()
-
 const goToChatRoom = (roomId) => {
   // 경기별 채팅방: gameId를 찾아서 이동
   const room = chatRooms.value.find(r => r.roomId === roomId)
@@ -110,6 +103,13 @@ const goToChatRoom = (roomId) => {
     console.error('게임 ID를 찾을 수 없습니다:', roomId)
   }
 }
+
+onBeforeUnmount(() => {
+  // 델타 구독 해제
+  chatStore.disconnectCountDeltaSubscriptions()
+
+  // 재연결 리스너 해제
+  chatStore.offReconnected()
 })
 </script>
 
