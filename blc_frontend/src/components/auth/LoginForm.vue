@@ -72,7 +72,7 @@
             <span class="spinner"></span>
             로그인 중...
           </span>
-          <span v-else> 🔐 로그인 </span>
+          <span v-else> 로그인 </span>
         </button>
       </form>
 

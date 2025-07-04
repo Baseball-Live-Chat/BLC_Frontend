@@ -1,24 +1,13 @@
+<!-- src/views/GameDetail.vue -->
 <template>
   <div class="container">
     <button class="back-button" @click="goBack">← 메인으로 돌아가기</button>
 
-    <!-- 🔍 디버그 정보 
-    <div v-if="gameId" class="debug-info">
-      <h3>🔍 디버그 정보</h3>
-      <p><strong>Game ID:</strong> {{ gameId }}</p>
-      <p><strong>Loading:</strong> {{ loading }}</p>
-      <p><strong>Error:</strong> {{ gameStore.error }}</p>
-      <p><strong>Current Game:</strong> {{ game ? '✅ 로드됨' : '❌ 없음' }}</p>
-      
-      <details v-if="game">
-        <summary>📄 게임 데이터 상세</summary>
-        <pre>{{ JSON.stringify(game, null, 2) }}</pre>
-      </details>
-    </div>-->
+    <div v-if="loading" class="loading">
+      {{ isGeneralChat ? '고정 채팅방' : '경기 정보' }}을 불러오는 중...
+    </div>
 
-    <div v-if="loading" class="loading">경기 정보를 불러오는 중...</div>
-
-    <div v-else-if="!game" class="error">
+    <div v-else-if="!game && !isGeneralChat" class="error">
       경기 정보를 찾을 수 없습니다.
       <br>
       <small>Game ID: {{ gameId }}</small>
@@ -27,10 +16,25 @@
     </div>
 
     <div v-else>
-      
+      <!-- 🆕 고정 채팅방과 경기별 채팅방 구분 -->
+      <div v-if="isGeneralChat" class="general-chat-container">
+        <!-- 고정 채팅방 헤더 정보 -->
+        <div class="general-header">
+          <h1>⚾ 전체 야구 팬 채팅방</h1>
+          <p>모든 KBO 팀을 응원할 수 있는 공간입니다</p>
+          <div class="general-stats">
+            <span class="stat-badge">🔴 실시간</span>
+            <span class="stat-badge">👥 {{ currentRoomInfo?.maxParticipants?.toLocaleString() }}명 수용</span>
+            <span class="stat-badge">⚾ 10개 팀 참여</span>
+          </div>
+        </div>
 
-      <!-- 통합 채팅 (하단 전체 너비) -->
-      <div class="chat-section-full">
+        <!-- 🌟 고정 채팅방 컴포넌트 (10개 팀 좌우 분할) -->
+        <GeneralChatSection :room-id="actualRoomId" />
+      </div>
+
+      <div v-else class="game-chat-container">
+        <!-- 기존 경기별 채팅 -->
         <UnifiedChatSection :game-id="gameId" :game="game" />
       </div>
     </div>
@@ -44,29 +48,51 @@ import { useGameStore } from '../stores/game'
 import { useChatStore } from '../stores/chat'
 import { getTeamInfo } from '../utils/teamUtils'
 import UnifiedChatSection from '../components/chat/UnifiedChatSection.vue'
+import GeneralChatSection from '../components/chat/GeneralChatSection.vue'
 
 const route = useRoute()
 const router = useRouter()
 const gameStore = useGameStore()
 const chatStore = useChatStore()
 
+// Props from router
 const gameId = computed(() => route.params.gameId)
+const routerRoomId = computed(() => route.params.roomId)
+
+// 고정 채팅방인지 확인 (gameId가 'general'이거나 undefined인 경우)
+const isGeneralChat = computed(() => 
+  gameId.value === 'general' || gameId.value === undefined
+)
+
+// 실제 roomId 계산
+const actualRoomId = computed(() => {
+  if (isGeneralChat.value) {
+    // 고정 채팅방: routerRoomId 사용
+    return routerRoomId.value
+  }
+  // 경기별 채팅방: gameId 사용
+  return gameId.value
+})
+
 const game = computed(() => gameStore.currentGame)
 const loading = computed(() => gameStore.loading)
 
-// 팀 정보 (백업용 - API 실패시 로컬 정보 사용)
-const homeTeamInfo = computed(() => getTeamInfo(game.value?.homeTeam))
-const awayTeamInfo = computed(() => getTeamInfo(game.value?.awayTeam))
+// 🌟 고정 채팅방 정보 (API에서 조회한 정보)
+const currentRoomInfo = computed(() => chatStore.currentRoomInfo)
 
-const getStatusText = status => {
-  const statusMap = {
-    LIVE: '🔴 LIVE',
-    ENDED: '⚫ 경기종료',
-    SCHEDULED: '⏰ 경기예정',
-    DELAYED: '⏸️ 경기지연',
-  }
-  return statusMap[status] || status
-}
+// 고정 채팅방 정보 (채팅방 목록에서 가져오기) - 백업용
+const generalRoom = computed(() => {
+  if (!isGeneralChat.value) return null
+  return chatStore.roomsWithDetails.find(room => room.gameId === null)
+})
+
+// 팀 정보 (경기별 채팅방에서만 사용)
+const homeTeamInfo = computed(() => 
+  game.value ? getTeamInfo(game.value.homeTeam) : null
+)
+const awayTeamInfo = computed(() => 
+  game.value ? getTeamInfo(game.value.awayTeam) : null
+)
 
 const goBack = () => {
   router.push('/')
@@ -75,18 +101,41 @@ const goBack = () => {
 // 이미지 로드 실패 시 백업 이미지 사용
 const handleImageError = (event) => {
   console.warn('팀 로고 이미지 로드 실패:', event.target.src)
-  // 기본 이미지로 대체하거나 숨기기
   event.target.style.display = 'none'
 }
 
 onMounted(async () => {
-  console.log('🎮 GameDetail 마운트, Game ID:', gameId.value)
+  console.log('🎮 GameDetail 마운트:', {
+    gameId: gameId.value,
+    roomId: routerRoomId.value,
+    isGeneral: isGeneralChat.value,
+    actualRoomId: actualRoomId.value,
+    routePath: route.path,
+    routeParams: route.params
+  })
   
   try {
-    await gameStore.fetchGameDetail(gameId.value)
-    console.log('✅ 게임 상세 조회 완료:', game.value)
+    if (isGeneralChat.value) {
+      // 고정 채팅방: 채팅방 목록만 로드 (게임 정보는 불필요)
+      console.log('🌟 고정 채팅방 모드')
+      if (chatStore.roomsWithDetails.length === 0) {
+        await chatStore.fetchActiveWithDetails()
+      }
+    } else {
+      // 경기별 채팅방: 게임 상세 정보 로드
+      console.log('🏟️ 경기별 채팅방 모드')
+      
+      // gameId가 유효한 숫자인지 확인
+      const numericGameId = parseInt(gameId.value)
+      if (isNaN(numericGameId)) {
+        throw new Error(`잘못된 게임 ID: ${gameId.value}`)
+      }
+      
+      await gameStore.fetchGameDetail(numericGameId)
+      console.log('✅ 게임 상세 조회 완료:', game.value)
+    }
   } catch (error) {
-    console.error('❌ 게임 상세 조회 실패:', error)
+    console.error('❌ 상세 조회 실패:', error)
   }
 })
 
@@ -103,35 +152,6 @@ onUnmounted(() => {
   padding: 20px;
 }
 
-/* 🔍 디버그 정보 스타일 */
-.debug-info {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
-  font-family: monospace;
-  font-size: 0.9rem;
-}
-
-.debug-info h3 {
-  margin: 0 0 10px 0;
-  color: #495057;
-}
-
-.debug-info details {
-  margin-top: 10px;
-}
-
-.debug-info pre {
-  background: white;
-  padding: 10px;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 0.8rem;
-}
-
-/* 기존 스타일들 */
 .back-button {
   background: #6c757d;
   color: white;
@@ -153,6 +173,24 @@ onUnmounted(() => {
   padding: 60px 20px;
   color: #666;
   font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.loading::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e3e3e3;
+  border-top: 2px solid #2c5aa0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .error {
@@ -165,80 +203,55 @@ onUnmounted(() => {
   border-radius: 8px;
 }
 
-/* 🏟️ 경기 정보 헤더 */
-.detail-header {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.detail-teams {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 30px;
-  margin-bottom: 20px;
-}
-
-.detail-team {
+/* 🌟 고정 채팅방 컨테이너 */
+.general-chat-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  gap: 20px;
 }
 
-.detail-team-logo {
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f8f9fa;
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-.team-image {
-  width: 60px;
-  height: 60px;
-  object-fit: contain;
-}
-
-.team-name {
-  font-weight: bold;
-  font-size: 1.1rem;
-  color: #333;
-}
-
-.detail-score {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #2c5aa0;
-}
-
-.detail-vs {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #666;
-}
-
-.game-info {
+.general-header {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #8B4513;
+  padding: 25px;
+  border-radius: 12px;
   text-align: center;
-  color: #666;
-  font-size: 1rem;
+  border: 3px solid #DAA520;
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
 }
 
-.game-status {
+.general-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
   font-weight: bold;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: #e9ecef;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 채팅 섹션 */
-.chat-section-full {
+.general-header p {
+  margin: 0 0 15px 0;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.general-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stat-badge {
+  background: rgba(255, 255, 255, 0.9);
+  color: #8B4513;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  border: 2px solid #DAA520;
+}
+
+/* 🏟️ 경기별 채팅방 컨테이너 */
+.game-chat-container {
   width: 100%;
 }
 
@@ -248,26 +261,21 @@ onUnmounted(() => {
     padding: 10px;
   }
   
-  .detail-teams {
-    gap: 15px;
+  .general-header {
+    padding: 20px 15px;
   }
   
-  .detail-team-logo {
-    width: 60px;
-    height: 60px;
-  }
-  
-  .team-image {
-    width: 45px;
-    height: 45px;
-  }
-  
-  .detail-score {
+  .general-header h1 {
     font-size: 1.5rem;
   }
   
-  .debug-info {
+  .general-stats {
+    gap: 8px;
+  }
+  
+  .stat-badge {
     font-size: 0.8rem;
+    padding: 4px 8px;
   }
 }
 </style>

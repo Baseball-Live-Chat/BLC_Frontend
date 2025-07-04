@@ -137,30 +137,6 @@
               전송
             </button>
           </div>
-
-          <!-- 빠른 응원 메시지 -->
-          <div class="quick-messages">
-            <span class="quick-label">빠른 응원:</span>
-            <button
-              v-for="quick in quickMessages"
-              :key="quick"
-              class="quick-btn"
-              :style="{
-                borderColor:
-                  selectedTeam === 'home'
-                    ? homeTeamInfo.color
-                    : awayTeamInfo.color,
-                color:
-                  selectedTeam === 'home'
-                    ? homeTeamInfo.color
-                    : awayTeamInfo.color,
-              }"
-              @click="useQuickMessage(quick)"
-            >
-              {{ quick }}
-            </button>
-          </div>
-
           <div class="input-info">
             <span class="char-count">{{ message.length }}/200</span>
           </div>
@@ -238,12 +214,6 @@ const sendMessage = async () => {
     message.value = '' // 전송 후 입력창 비우기
   } catch (error) {
     console.error('메시지 전송 실패:', error)
-  }
-}
-
-const useQuickMessage = quickMsg => {
-  if (message.value.length + quickMsg.length <= 200) {
-    message.value = message.value ? `${message.value} ${quickMsg}` : quickMsg
   }
 }
 
@@ -459,35 +429,6 @@ onUnmounted(() => {
   opacity: 0.6;
 }
 
-/* 빠른 응답 메시지 */
-.quick-messages {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.quick-label {
-  font-size: 0.9rem;
-  color: #6c757d;
-  font-weight: 500;
-}
-
-.quick-btn {
-  padding: 4px 12px;
-  border: 1px solid;
-  border-radius: 15px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
-}
-
-.quick-btn:hover {
-  background-color: rgba(44, 90, 160, 0.1);
-  transform: translateY(-1px);
-}
 
 .input-info {
   display: flex;
@@ -547,15 +488,6 @@ onUnmounted(() => {
     font-size: 0.9rem;
     padding: 10px 20px;
     min-width: 70px;
-  }
-
-  .quick-messages {
-    gap: 6px;
-  }
-
-  .quick-btn {
-    padding: 3px 8px;
-    font-size: 0.75rem;
   }
 }
 </style>
