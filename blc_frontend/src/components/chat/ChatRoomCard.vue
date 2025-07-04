@@ -40,15 +40,35 @@
       <div class="game-stadium">{{ game.stadium }}</div>
     </div>
 
+    <!-- ▶ 채팅 수 게이지 -->
+    <div class="chat-gauge">
+      <!-- 홈팀 영역 -->
+      <div
+        class="bar home"
+        :style="{
+          width: homePercent + '%',
+          backgroundColor: homeColor
+        }"
+      ></div>
+      <!-- 어웨이팀 영역 -->
+      <div
+        class="bar away"
+        :style="{
+          width: awayPercent + '%',
+          backgroundColor: awayColor
+        }"
+      ></div>
+    </div>
+
     <!-- 채팅방 메타: 방 이름 + 참가자(?) -->
-    <div class="room-meta">
+    <!-- <div class="room-meta">
       <h4>💬 {{ room.roomName.replace(/\s*채팅방$/, '') }}</h4>
       <p class="participants">
         <span class="label">채팅방 정원</span>
         <span class="colon">:</span>
         <span class="count">{{ room.maxParticipants }}명</span>
       </p>
-    </div>
+    </div> -->
 
     <!-- 응원 현황(cheer) 영역은 그대로 재사용해도 되고, 
          room.participants가 있다면 그걸로 대체 
@@ -79,11 +99,35 @@
 import { computed } from 'vue'
 import GameStatus from '../game/GameStatus.vue'
 import { getTeamImageByCode } from '@/utils/teamImageByCode'
+import { getTeamInfo } from '@/utils/teamUtils'  // 팀 색상 유틸
 
 const props = defineProps({
   room: { type: Object, required: true },
   game: { type: Object, required: true },
+  homeMessageCount: { type: Number, default: 0 },
+  awayMessageCount: { type: Number, default: 0 },
 })
+
+// ② 팀 색상 꺼내기 (여기에 추가하세요)
+const homeTeamInfo = computed(() => getTeamInfo(props.game.homeCode))
+const awayTeamInfo = computed(() => getTeamInfo(props.game.awayCode))
+
+// ③ 바 색상만 빨리 꺼내두기
+const homeColor = computed(() => homeTeamInfo.value.color)
+const awayColor = computed(() => awayTeamInfo.value.color)
+
+// ④ 퍼센트 계산
+const total = computed(() => {
+  const sum = props.homeMessageCount + props.awayMessageCount
+  return sum > 0 ? sum : 1
+})
+const homePercent = computed(() =>
+  (props.homeMessageCount / total.value) * 100
+)
+const awayPercent = computed(() =>
+  (props.awayMessageCount / total.value) * 100
+)
+
 
 const emit = defineEmits(['click'])
 
@@ -102,16 +146,29 @@ function formatDate(raw) {
 </script>
 
 <style scoped>
-.room-meta {
-  text-align: center;
-  margin-top: 12px;
+
+.chat-gauge {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;      /* 게이지 바탕 */
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+.chat-gauge .bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.chat-gauge .bar.home {
+  left: 0;    /* 왼쪽부터 자라남 */
+}
+.chat-gauge .bar.away {
+  right: 0;   /* 오른쪽부터 자라남 */
 }
 
-.room-meta h4 {
-  margin-bottom: 6px;
-  font-size: 1rem;
-  font-weight: 600;
-}
 
 /* participants 꾸밈 */
 .participants {

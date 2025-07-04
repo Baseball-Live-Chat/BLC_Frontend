@@ -26,6 +26,8 @@
           :key="item.roomId"
           :room="item"
           :game="item.game"
+          :homeMessageCount="chatStore.countsByRoom[item.roomId]?.home || 0"
+          :awayMessageCount="chatStore.countsByRoom[item.roomId]?.away || 0"
           @click="goToChatRoom(item.roomId)"
         />
 
@@ -41,10 +43,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
-
 import ChatRoomCard from '../components/chat/ChatRoomCard.vue'
 import GeneralChatRoomCard from '../components/chat/GeneralChatRoomCard.vue'
 
@@ -74,6 +75,32 @@ const goToGeneralChat = () => {
   }
 }
 
+let roomIds = []
+
+onMounted(async () => {
+  // 1) 채팅방+상세정보 로드
+  await chatStore.fetchActiveWithDetails()
+
+  // 2) 방 ID 목록으로 초기 counts 불러오기
+  roomIds = chatStore.roomsWithDetails.map(r => r.roomId)
+  await chatStore.fetchCounts(roomIds)
+
+  // 3) counts WebSocket 구독
+  chatStore.connectCountDeltaSubscriptions(roomIds)
+})
+
+chatStore.onReconnected(async () => {
+   console.log('🔄 WS 재연결—counts 초기화 다시 호출')
+   await chatStore.fetchCounts(roomIds)
+ })
+
+onBeforeUnmount(() => {
+  // 델타 구독 해제
+  chatStore.disconnectCountDeltaSubscriptions()
+
+  // 재연결 리스너 해제
+  chatStore.offReconnected()
+
 const goToChatRoom = (roomId) => {
   // 경기별 채팅방: gameId를 찾아서 이동
   const room = chatRooms.value.find(r => r.roomId === roomId)
@@ -83,16 +110,6 @@ const goToChatRoom = (roomId) => {
     console.error('게임 ID를 찾을 수 없습니다:', roomId)
   }
 }
-
-// 🚀 초기 데이터 로드
-onMounted(async () => {
-  console.log('🏠 Home 컴포넌트 마운트 - 채팅방 목록 로드 시작')
-  await chatStore.fetchActiveWithDetails()
-  console.log('✅ 채팅방 목록 로드 완료:', {
-    total: chatRooms.value.length,
-    general: generalChatRoom.value ? 1 : 0,
-    games: gameChatRooms.value.length
-  })
 })
 </script>
 

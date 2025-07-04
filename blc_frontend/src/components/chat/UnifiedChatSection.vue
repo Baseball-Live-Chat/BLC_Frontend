@@ -217,12 +217,6 @@ const sendMessage = async () => {
   }
 }
 
-const useQuickMessage = quickMsg => {
-  if (message.value.length + quickMsg.length <= 200) {
-    message.value = message.value ? `${message.value} ${quickMsg}` : quickMsg
-  }
-}
-
 
 
 onMounted(async () => {
@@ -435,35 +429,6 @@ onUnmounted(() => {
   opacity: 0.6;
 }
 
-/* 빠른 응답 메시지 */
-.quick-messages {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.quick-label {
-  font-size: 0.9rem;
-  color: #6c757d;
-  font-weight: 500;
-}
-
-.quick-btn {
-  padding: 4px 12px;
-  border: 1px solid;
-  border-radius: 15px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
-}
-
-.quick-btn:hover {
-  background-color: rgba(44, 90, 160, 0.1);
-  transform: translateY(-1px);
-}
 
 .input-info {
   display: flex;
@@ -523,15 +488,6 @@ onUnmounted(() => {
     font-size: 0.9rem;
     padding: 10px 20px;
     min-width: 70px;
-  }
-
-  .quick-messages {
-    gap: 6px;
-  }
-
-  .quick-btn {
-    padding: 3px 8px;
-    font-size: 0.75rem;
   }
 }
 </style>

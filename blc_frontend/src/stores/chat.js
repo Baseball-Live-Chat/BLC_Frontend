@@ -24,6 +24,9 @@ export const useChatStore = defineStore('chat', {
     messagesLoading: false,
     messagesError: null,
     currentRoomId: null,
+    countsByRoom: {},         // roomId별 { home, away } 카운트
+    countsClient: null,       // counts 전용 STOMP 클라이언트
+    reconnectCallbacks: [],   // WS 재연결 시 호출할 콜백 목록
     // 🆕 고정 채팅방 관련 상태
     isGeneralChat: false,
     generalMessages: [], // 고정 채팅방의 모든 메시지 (팀별 구분 없이)
@@ -66,7 +69,83 @@ export const useChatStore = defineStore('chat', {
   },
 
   actions: {
-    // ✅ 1. 활성 채팅방 목록 조회 (기존과 동일)
+        // --- ① 초기 REST API로 counts 가져오기 ---
+   async fetchCounts(roomIds) {
+  try {
+    // 배열을 반복 파라미터로 변환
+    const qs = roomIds.map(id => `roomIds=${id}`).join('&')
+    const res = await http.get(`/api/chats/rooms/counts?${qs}`)
+    res.data.forEach(({ roomId, homeCount, awayCount }) => {
+      this.countsByRoom[roomId] = { home: homeCount, away: awayCount }
+    })
+  } catch (e) {
+    console.error('❌ 초기 counts 로드 실패', e)
+  }
+},
+
+    // --- ② WebSocket으로 counts-delta 토픽 구독 (델타 전용) ---
+    connectCountDeltaSubscriptions(roomIds) {
+     // 이미 구독중이면 해제
+     if (this.countsClient && this.countsClient.active) {
+       this.countsClient.deactivate()
+     }
+
+     const socket = new SockJS(socketURL + '/chat-socket')
+     const client = new Client({
+      webSocketFactory: () => socket,
+       reconnectDelay: 5000,
+       debug: () => {}
+     })
+
+     client.onConnect = () => {
+      roomIds.forEach(id => {
+        client.subscribe(`/topic/game/${id}/counts-delta`, msg => {
+          const { roomId, type } = JSON.parse(msg.body)
+          // 없는 방이면 무시
+          if (!this.countsByRoom[roomId]) return
+          this.countsByRoom[roomId][type] += 1
+        })
+       })
+       console.log('📡 counts 구독 완료', roomIds)
+     }
+
+     client.activate()
+     this.countsClient = client
+   },
+
+    // --- ③ counts 구독 해제 ---
+    disconnectCountDeltaSubscriptions() {
+     if (this.countsClient && this.countsClient.active) {
+       this.countsClient.deactivate()
+       this.countsClient = null
+     }
+   },
+
+   onReconnected(fn) {
+      this.reconnectCallbacks.push(fn)
+      // STOMP 클라이언트가 이미 있으면, disconnect 후 activate 시 callback 트리거
+      if (this.countsClient) {
+        const originalOnConnect = this.countsClient.onConnect
+        this.countsClient.onConnect = async frame => {
+          // 1) 기존 onConnect 동작
+          if (originalOnConnect) originalOnConnect(frame)
+          // 2) 재연결 콜백 실행
+          for (const cb of this.reconnectCallbacks) {
+            try { await cb() }
+            catch (e) { console.error('🔄 재연결 콜백 오류', e) }
+          }
+        }
+      }
+    },
+
+    /**
+     * onReconnected 로 등록된 콜백을 모두 해제합니다.
+     */
+    offReconnected() {
+      this.reconnectCallbacks = []
+    },
+    
+    // ✅ 1. 활성 채팅방 목록 조회
     async fetchChatRooms() {
       this.roomsLoading = true
       this.roomsError = null

@@ -18,7 +18,7 @@ export const TEAM_INFO = {
     color: '#074CA1',
     bgColor: '#f0f7ff',
   },
-  기아: {
+  KIA: {
     name: '기아 타이거즈',
     image: '/images/teams/kia.png',
     color: '#EA0029',
