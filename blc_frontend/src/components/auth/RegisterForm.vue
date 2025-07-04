@@ -186,7 +186,7 @@
             <span class="spinner"></span>
             가입 중...
           </span>
-          <span v-else> 🎯 회원가입 </span>
+          <span v-else> 회원가입 </span>
         </button>
       </form>
 

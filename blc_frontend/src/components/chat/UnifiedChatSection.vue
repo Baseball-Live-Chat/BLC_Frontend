@@ -137,30 +137,6 @@
               전송
             </button>
           </div>
-
-          <!-- 빠른 응원 메시지 -->
-          <div class="quick-messages">
-            <span class="quick-label">빠른 응원:</span>
-            <button
-              v-for="quick in quickMessages"
-              :key="quick"
-              class="quick-btn"
-              :style="{
-                borderColor:
-                  selectedTeam === 'home'
-                    ? homeTeamInfo.color
-                    : awayTeamInfo.color,
-                color:
-                  selectedTeam === 'home'
-                    ? homeTeamInfo.color
-                    : awayTeamInfo.color,
-              }"
-              @click="useQuickMessage(quick)"
-            >
-              {{ quick }}
-            </button>
-          </div>
-
           <div class="input-info">
             <span class="char-count">{{ message.length }}/200</span>
           </div>
