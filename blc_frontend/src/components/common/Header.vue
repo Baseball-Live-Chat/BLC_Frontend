@@ -78,7 +78,7 @@
               </router-link> 추후 추가 예정-->
               <div class="dropdown-divider"></div>
               <button class="dropdown-item logout-btn" @click="handleLogout">
-                🚪 로그아웃
+                로그아웃
               </button>
             </div>
           </div>
@@ -90,14 +90,14 @@
               class="auth-btn login-btn"
               @click="closeMobileMenu"
             >
-              🔐 로그인
+              로그인
             </router-link>
             <router-link
               to="/register"
               class="auth-btn register-btn"
               @click="closeMobileMenu"
             >
-              ✍️ 회원가입
+              회원가입
             </router-link>
           </div>
         </div>

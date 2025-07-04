@@ -1,3 +1,4 @@
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import GameDetail from '../views/GameDetail.vue'
@@ -19,13 +20,24 @@ const routes = [
     props: true,
     meta: { title: '채팅 | BLC' }
   },
+  // 🌟 새로 추가: 고정 채팅방 라우트
+  {
+    path: '/chat/:roomId',
+    name: 'GeneralChat',
+    component: GameDetail,
+    props: route => ({
+      gameId: 'general',           // 특별한 식별자
+      roomId: route.params.roomId  // 실제 roomId 전달
+    }),
+    meta: { title: '전체 채팅 | BLC' }
+  },
   {
     path: '/login',
     name: 'Login',
     component: LoginForm,
     meta: {
       title: '로그인 | BLC',
-      requiresGuest: true, // 로그인된 사용자는 접근 불가
+      requiresGuest: true,
     },
   },
   {
@@ -37,11 +49,11 @@ const routes = [
       requiresGuest: true,
     },
   },
-  { path: '/profile', 
+  { 
+    path: '/profile', 
     name: 'Profile', 
-    component: ProfileView ,
-    meta: { title: '마이페이지 | BLC' }
-    ,
+    component: ProfileView,
+    meta: { title: '마이페이지 | BLC' },
   }
 ]
 

@@ -137,7 +137,6 @@
               전송
             </button>
           </div>
-
           <div class="input-info">
             <span class="char-count">{{ message.length }}/200</span>
           </div>

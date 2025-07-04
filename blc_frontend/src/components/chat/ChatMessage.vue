@@ -1,9 +1,10 @@
+<!-- src/components/chat/ChatMessage.vue -->
 <template>
   <div 
     class="chat-message" 
     :class="{ 
-      'home-team': message.team === 'home',
-      'away-team': message.team === 'away',
+      'home-team': isLeftAligned,
+      'away-team': isRightAligned,
       'my-message': isMyMessage 
     }"
   >
@@ -22,8 +23,8 @@
       <div 
         class="message-content" 
         :style="{ 
-          borderLeftColor: message.team === 'home' ? teamColor : 'transparent',
-          borderRightColor: message.team === 'away' ? teamColor : 'transparent'
+          borderLeftColor: isLeftAligned ? teamColor : 'transparent',
+          borderRightColor: isRightAligned ? teamColor : 'transparent'
         }"
       >
         {{ message.content }}
@@ -54,6 +55,35 @@ const props = defineProps({
 // Auth Store 접근
 const authStore = useAuthStore()
 
+// 🆕 메시지 정렬 로직 (경기별 + 고정 채팅방 모두 지원)
+const isLeftAligned = computed(() => {
+  // 경기별 채팅방: message.team이 'home'인 경우
+  if (props.message.team === 'home') {
+    return true
+  }
+  
+  // 고정 채팅방: teamId 1-5 (왼쪽 정렬)
+  if (props.message.teamId && [1, 2, 3, 4, 5].includes(props.message.teamId)) {
+    return true
+  }
+  
+  return false
+})
+
+const isRightAligned = computed(() => {
+  // 경기별 채팅방: message.team이 'away'인 경우
+  if (props.message.team === 'away') {
+    return true
+  }
+  
+  // 고정 채팅방: teamId 6-10 (오른쪽 정렬)
+  if (props.message.teamId && [6, 7, 8, 9, 10].includes(props.message.teamId)) {
+    return true
+  }
+  
+  return false
+})
+
 // 현재 사용자의 메시지인지 확인 (익명 사용자 고려)
 const isMyMessage = computed(() => {
   // 로그인되지 않은 경우 - 익명 메시지는 모두 다른 사용자로 처리
@@ -80,7 +110,7 @@ const formatTime = timestamp => {
   width: 100%;
 }
 
-/* 🏠 홈팀 메시지 - 왼쪽 정렬 */
+/* 🏠 왼쪽 정렬 메시지 (홈팀 또는 1-5번 팀) */
 .chat-message.home-team {
   justify-content: flex-start;
 }
@@ -89,23 +119,19 @@ const formatTime = timestamp => {
   justify-content: flex-start;
 }
 
-.chat-message.away-team .message-header {
-  justify-content: flex-end;
-}
-
 .chat-message.home-team .message-container {
   align-items: flex-start;
   text-align: left;
 }
 
 .chat-message.home-team .message-content {
-  background: #f8f9fa;
+  background: white;
   border-left: 4px solid;
   border-right: none;
   border-radius: 8px 18px 18px 8px;
 }
 
-/* ✈️ 원정팀 메시지 - 오른쪽 정렬 */
+/* ✈️ 오른쪽 정렬 메시지 (원정팀 또는 6-10번 팀) */
 .chat-message.away-team {
   justify-content: flex-end;
 }
@@ -115,8 +141,12 @@ const formatTime = timestamp => {
   text-align: right;
 }
 
+.chat-message.away-team .message-header {
+  justify-content: flex-end;
+}
+
 .chat-message.away-team .message-content {
-  background: #f8f9fa;
+  background: white;
   border-right: 4px solid;
   border-left: none;
   border-radius: 18px 8px 8px 18px;
@@ -246,6 +276,4 @@ const formatTime = timestamp => {
     transform: none;
   }
 }
-
-
 </style>
