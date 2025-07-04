@@ -17,6 +17,8 @@
           :key="item.roomId"
           :room="item"
           :game="item.game"
+          :homeMessageCount="chatStore.countsByRoom[item.roomId]?.home || 0"
+          :awayMessageCount="chatStore.countsByRoom[item.roomId]?.away || 0"
           @click="goToChatRoom(item.roomId)"
         />
       </div>
@@ -25,11 +27,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
-
-import RankingSection from '../components/game/RankingSection.vue'
 import ChatRoomCard from '../components/chat/ChatRoomCard.vue'
 
 const router = useRouter()
@@ -43,8 +43,31 @@ const goToChatRoom = id => {
   router.push(`/games/${id}`)
 }
 
+let roomIds = []
+
 onMounted(async () => {
+  // 1) 채팅방+상세정보 로드
   await chatStore.fetchActiveWithDetails()
+
+  // 2) 방 ID 목록으로 초기 counts 불러오기
+  roomIds = chatStore.roomsWithDetails.map(r => r.roomId)
+  await chatStore.fetchCounts(roomIds)
+
+  // 3) counts WebSocket 구독
+  chatStore.connectCountDeltaSubscriptions(roomIds)
+})
+
+chatStore.onReconnected(async () => {
+   console.log('🔄 WS 재연결—counts 초기화 다시 호출')
+   await chatStore.fetchCounts(roomIds)
+ })
+
+onBeforeUnmount(() => {
+  // 델타 구독 해제
+  chatStore.disconnectCountDeltaSubscriptions()
+
+  // 재연결 리스너 해제
+  chatStore.offReconnected()
 })
 </script>
 
