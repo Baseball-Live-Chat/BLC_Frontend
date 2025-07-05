@@ -5,6 +5,8 @@ import GameDetail from '../views/GameDetail.vue'
 import LoginForm from '@/components/auth/LoginForm.vue'
 import RegisterForm from '@/components/auth/RegisterForm.vue'
 import ProfileView from '@/views/ProfileView.vue'
+import AttendanceView from '@/views/AttendanceView.vue'
+import InboxView from '@/views/InboxView.vue'
 
 const routes = [
   {
@@ -54,7 +56,19 @@ const routes = [
     name: 'Profile', 
     component: ProfileView,
     meta: { title: '마이페이지 | BLC' },
-  }
+  },
+  { 
+    path: '/attendance',
+    name: 'attendance',
+    component: AttendanceView,
+    meta: { title: '출석 | BLC' },
+  },
+  // 🌟 추후 추가될 기능: 출석 수신함 라우트
+  // { path: '/inbox',  
+  //   name: 'Inbox',
+  //   component: InboxView,
+  //   meta: { title: '수신함 | BLC' },
+  // },
 ]
 
 const router = createRouter({

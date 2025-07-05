@@ -69,6 +69,24 @@
               >
                 👤 프로필
               </router-link>
+
+              <!-- 출석체크 및 수신함 링크 추가 -->
+              <router-link
+                to="/attendance"
+                class="dropdown-item"
+                @click="closeUserMenu"
+              >
+                🗓️ 출석현황
+              </router-link>
+              <!-- 추후 추가 예정 -->
+              <!-- <router-link
+                to="/inbox"
+                class="dropdown-item"
+                @click="closeUserMenu"
+              >
+                📥 수신함
+              </router-link> -->
+              
               <!-- <router-link
                 to="/settings"
                 class="dropdown-item"
