@@ -3,13 +3,13 @@ export const TEAM_INFO = {
   두산: {
     name: '두산 베어스',
     image: '/images/teams/doosan.png',
-    color: '#131230',
+    color: '#1A1748',
     bgColor: '#f8f9ff',
   },
   LG: {
     name: 'LG 트윈스',
     image: '/images/teams/lg.png',
-    color: '#C4184C',
+    color: '#C30452',
     bgColor: '#fef7f9',
   },
   삼성: {
@@ -39,7 +39,7 @@ export const TEAM_INFO = {
   한화: {
     name: '한화 이글스',
     image: '/images/teams/hanwha.png',
-    color: '#FF6600',
+    color: '#FC4E00',
     bgColor: '#fff8f0',
   },
   KT: {
