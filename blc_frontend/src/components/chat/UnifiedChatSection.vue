@@ -1,13 +1,12 @@
 <template>
-  <!-- 팀별 화력 표시 -->
-  <TeamFirepowerIndicator
-    :homeTeam="game.homeTeam"
-    :awayTeam="game.awayTeam"
-    :homeMessageCount="homeMessages.length"
-    :awayMessageCount="awayMessages.length"
+  <!-- 베팅 섹션 (기존 TeamFirepowerIndicator 교체) -->
+  <BettingSection
+    :gameId="gameId"
+    :game="game"
     :homeTeamInfo="homeTeamInfo"
     :awayTeamInfo="awayTeamInfo"
   />
+  
   <div class="unified-chat-section">
     <!-- 채팅방 헤더 -->
     <div class="chat-header">
@@ -151,8 +150,7 @@ import { computed, onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
 import { useChatStore } from '../../stores/chat'
 import { getTeamInfo } from '../../utils/teamUtils'
 import ChatMessage from './ChatMessage.vue'
-import TeamFirepowerIndicator from './TeamFirepowerIndicator.vue'
-
+import BettingSection from '../betting/BettingSection.vue' // 베팅 컴포넌트 import
 
 const props = defineProps({
   gameId: {
@@ -176,8 +174,6 @@ const sortedAllMessages = computed(() => chatStore.getAllMessages)
 
 const homeTeamInfo = computed(() => getTeamInfo(props.game.homeTeam))
 const awayTeamInfo = computed(() => getTeamInfo(props.game.awayTeam))
-
-
 
 // 새로운 메시지가 추가될 때마다 스크롤을 맨 아래로
 watch(
@@ -205,7 +201,6 @@ const handleInput = event => {
   }
 }
 
-
 const sendMessage = async () => {
   if (!message.value.trim() || !selectedTeam.value) return
 
@@ -217,8 +212,6 @@ const sendMessage = async () => {
   }
 }
 
-
-
 onMounted(async () => {
   try {
     await chatStore.connectToGame(props.gameId, props.game)
@@ -226,6 +219,7 @@ onMounted(async () => {
     console.error('채팅방 연결 실패:', error)
   }
 })
+
 onUnmounted(() => {
   chatStore.disconnect()
 })
@@ -428,7 +422,6 @@ onUnmounted(() => {
   cursor: not-allowed;
   opacity: 0.6;
 }
-
 
 .input-info {
   display: flex;
