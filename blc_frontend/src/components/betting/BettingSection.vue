@@ -233,24 +233,78 @@ const formatOdds = (odds) => {
   return odds.toFixed(2)
 }
 
-// 팀 ID 가져오기 (실제 API 구조에 맞게 수정 필요)
+// 팀 코드를 team_id로 매핑하는 함수
+const getTeamIdByCode = (teamCode) => {
+  const TEAM_CODE_TO_ID = {
+    '키움': 1,
+    '두산': 2,
+    '롯데': 3,
+    'SSG': 4,
+    'KT': 5,
+    '삼성': 6,
+    'KIA': 7,
+    'NC': 8,
+    'LG': 9,
+    '한화': 10
+  }
+  return TEAM_CODE_TO_ID[teamCode] || null
+}
+
 const getHomeTeamId = () => {
-  // 백엔드 API에서 teamId를 제공하는 경우
-  return props.game.homeTeamInfo?.teamId || 1
+  // 1. 백엔드 API에서 직접 teamId를 제공하는 경우
+  if (props.game.homeTeamInfo?.teamId) {
+    return props.game.homeTeamInfo.teamId
+  }
+  
+  // 2. 팀 코드로 team_id 찾기
+  const homeTeamCode = props.game.homeTeam || props.game.homeTeamInfo?.code
+  const teamId = getTeamIdByCode(homeTeamCode)
+  
+  console.log('홈팀 ID 조회:', { 
+    homeTeamCode, 
+    teamId, 
+    gameData: props.game 
+  })
+  
+  return teamId
 }
 
 const getAwayTeamId = () => {
-  // 백엔드 API에서 teamId를 제공하는 경우
-  return props.game.awayTeamInfo?.teamId || 2
+  // 1. 백엔드 API에서 직접 teamId를 제공하는 경우
+  if (props.game.awayTeamInfo?.teamId) {
+    return props.game.awayTeamInfo.teamId
+  }
+  
+  // 2. 팀 코드로 team_id 찾기  
+  const awayTeamCode = props.game.awayTeam || props.game.awayTeamInfo?.code
+  const teamId = getTeamIdByCode(awayTeamCode)
+  
+  console.log('원정팀 ID 조회:', { 
+    awayTeamCode, 
+    teamId, 
+    gameData: props.game 
+  })
+  
+  return teamId
 }
 
 const handleTeamSelect = (teamId) => {
+  if (!teamId) {
+    alert('팀 정보를 불러올 수 없습니다.')
+    return
+  }
+
   if (userBetStatus.value?.predictedWinnerTeamId && 
       userBetStatus.value.predictedWinnerTeamId !== teamId) {
     alert('이미 다른 팀에 베팅하셨습니다. 같은 팀에만 추가 베팅이 가능합니다.')
     return
   }
+  
   selectedTeam.value = teamId
+  console.log('선택된 팀:', {
+    teamId,
+    teamName: teamId === getHomeTeamId() ? props.game.homeTeam : props.game.awayTeam
+  })
 }
 
 const setBetAmount = (amount) => {
@@ -275,9 +329,37 @@ const handleBet = async () => {
     return
   }
 
+  // 팀 ID 유효성 검사
+  const homeTeamId = getHomeTeamId()
+  const awayTeamId = getAwayTeamId()
+  
+  if (!homeTeamId || !awayTeamId) {
+    alert('팀 정보를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.')
+    console.error('팀 ID 조회 실패:', {
+      homeTeamId,
+      awayTeamId,
+      selectedTeam: selectedTeam.value,
+      game: props.game
+    })
+    return
+  }
+
+  if (selectedTeam.value !== homeTeamId && selectedTeam.value !== awayTeamId) {
+    alert('잘못된 팀이 선택되었습니다.')
+    return
+  }
+
   isSubmitting.value = true
 
   try {
+    console.log('베팅 요청 데이터:', {
+      gameId: props.gameId,
+      predictedWinnerTeamId: selectedTeam.value,
+      betPoints: amount,
+      homeTeamId,
+      awayTeamId
+    })
+    
     await bettingStore.placeBet(props.gameId, selectedTeam.value, amount)
     betAmount.value = ''
     alert('베팅이 완료되었습니다!')
@@ -292,6 +374,13 @@ const handleBet = async () => {
 // 라이프사이클
 onMounted(async () => {
   console.log('🎯 BettingSection 마운트:', props.gameId)
+  console.log('경기 정보:', props.game)
+  console.log('팀 정보:', {
+    homeTeam: props.game.homeTeam,
+    awayTeam: props.game.awayTeam,
+    homeTeamId: getHomeTeamId(),
+    awayTeamId: getAwayTeamId()
+  })
   
   try {
     // 베팅 WebSocket 연결
