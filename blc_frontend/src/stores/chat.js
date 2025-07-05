@@ -334,6 +334,9 @@ export const useChatStore = defineStore('chat', {
     async connectToGame(gameId, gameData) {
       console.log('🎮 게임 연결 시작:', gameId, gameData?.homeTeamName, 'vs', gameData?.awayTeamName)
       
+      if (!this.chatRooms.length) {
+        await this.fetchChatRooms();
+      }
       this.currentGameId = gameId
       this.currentGame = gameData
       this.isGeneralChat = false
