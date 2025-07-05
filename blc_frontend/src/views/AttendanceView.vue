@@ -23,8 +23,8 @@
               {{ day }}
             </div>
             <div
-              v-for="cell in calendarCells"
-              :key="cell.date || cell.day + cell"
+              v-for="(cell, index) in calendarCells"
+              :key="cell.date || `empty-${index}`"
               class="day-cell"
               :class="{
                 today: cell.date && isToday(cell.date),
