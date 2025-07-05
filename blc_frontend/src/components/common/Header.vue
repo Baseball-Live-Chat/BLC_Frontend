@@ -24,26 +24,27 @@
       <!-- 🧭 네비게이션 메뉴 -->
       <nav class="header-nav" :class="{ active: isMobileMenuOpen }">
         <div class="nav-links">
-          <!-- <router-link to="/" class="nav-link" @click="closeMobileMenu">
-            🏟️ 경기장
-          </router-link> 추후 추가 예정-->
-
-          <!-- 로그인된 사용자만 볼 수 있는 메뉴 -->
-          <template v-if="authStore.isAuthenticated">
-            <!-- <router-link
-              to="/my-games"
-              class="nav-link"
-              @click="closeMobileMenu"
-            >
-              🎯 내 경기
-            </router-link> 추후 추가 예정 -->
-          </template>
+          <!-- 추후 메뉴 추가 예정 -->
         </div>
 
         <!-- 👤 사용자 영역 -->
         <div class="header-user">
           <!-- 로그인된 경우 -->
           <div v-if="authStore.isAuthenticated" class="user-section">
+            <!-- 💰 포인트 표시 -->
+            <div class="user-points" @click="refreshPoints">
+              <span class="points-icon">💰</span>
+              <span class="points-amount">{{ authStore.formattedPoints }}P</span>
+              <button 
+                class="refresh-btn"
+                :class="{ refreshing: isRefreshing }"
+                @click.stop="refreshPoints"
+                title="포인트 새로고침"
+              >
+                🔄
+              </button>
+            </div>
+
             <div class="user-info" @click="toggleUserMenu">
               <div class="user-avatar">
                 <img
@@ -69,7 +70,9 @@
               >
                 👤 프로필
               </router-link>
-
+              <div class="dropdown-item points-info">
+                💰 보유 포인트: {{ authStore.formattedPoints }}P
+              </div>
               <!-- 출석체크 및 수신함 링크 추가 -->
               <router-link
                 to="/attendance"
@@ -94,9 +97,11 @@
               >
                 ⚙️ 설정
               </router-link> 추후 추가 예정-->
+              
+              
               <div class="dropdown-divider"></div>
               <button class="dropdown-item logout-btn" @click="handleLogout">
-                로그아웃
+                🚪 로그아웃
               </button>
             </div>
           </div>
@@ -143,6 +148,7 @@ const router = useRouter()
 // 📱 메뉴 상태
 const isMobileMenuOpen = ref(false)
 const isUserMenuOpen = ref(false)
+const isRefreshing = ref(false)
 
 // ⚡ 메서드
 const toggleMobileMenu = () => {
@@ -162,6 +168,23 @@ const toggleUserMenu = () => {
 const closeUserMenu = () => {
   isUserMenuOpen.value = false
   closeMobileMenu()
+}
+
+// 💰 포인트 새로고침
+const refreshPoints = async () => {
+  if (isRefreshing.value) return
+  
+  isRefreshing.value = true
+  try {
+    await authStore.fetchUserPoints()
+    console.log('🔄 포인트 새로고침 완료')
+  } catch (error) {
+    console.error('❌ 포인트 새로고침 실패:', error)
+  } finally {
+    setTimeout(() => {
+      isRefreshing.value = false
+    }, 500) // 애니메이션을 위한 딜레이
+  }
 }
 
 const handleLogout = async () => {
@@ -300,30 +323,68 @@ onUnmounted(() => {
   gap: 24px;
 }
 
-.nav-link {
-  color: #4a5568;
-  text-decoration: none;
-  font-weight: 500;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.nav-link:hover {
-  color: #2c5aa0;
-  background-color: #f8fafc;
-}
-
-.nav-link.router-link-active {
-  color: #2c5aa0;
-  background-color: #ebf4ff;
-}
-
 /* 👤 사용자 영역 */
 .header-user {
   display: flex;
   align-items: center;
+  gap: 16px;
+}
+
+/* 💰 포인트 표시 */
+.user-points {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #8B4513;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 2px solid #DAA520;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+}
+
+.user-points:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+}
+
+.points-icon {
+  font-size: 16px;
+}
+
+.points-amount {
+  font-size: 14px;
+  font-weight: bold;
+  min-width: 60px;
+  text-align: center;
+}
+
+.refresh-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+  padding: 2px;
+  border-radius: 50%;
+}
+
+.refresh-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.refresh-btn.refreshing {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* 인증 버튼 */
@@ -368,6 +429,9 @@ onUnmounted(() => {
 /* 사용자 정보 */
 .user-section {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .user-info {
@@ -436,7 +500,7 @@ onUnmounted(() => {
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  min-width: 180px;
+  min-width: 200px;
   z-index: 1002;
   animation: slideDown 0.2s ease;
 }
@@ -469,6 +533,17 @@ onUnmounted(() => {
 
 .dropdown-item:hover {
   background-color: #f8fafc;
+}
+
+.points-info {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #8B4513;
+  font-weight: bold;
+  cursor: default;
+}
+
+.points-info:hover {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
 }
 
 .dropdown-divider {
@@ -536,26 +611,52 @@ onUnmounted(() => {
     transform: translateX(0);
   }
 
-  .nav-links {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-    width: 100%;
-  }
-
-  .nav-link {
-    padding: 16px;
-    text-align: center;
-    font-size: 16px;
-    border-radius: 12px;
-  }
-
   .header-user {
     width: 100%;
     justify-content: center;
     margin-top: 24px;
     padding-top: 24px;
     border-top: 1px solid #e2e8f0;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .user-section {
+    width: 100%;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .user-points {
+    justify-content: center;
+    padding: 12px 20px;
+    font-size: 16px;
+  }
+
+  .points-amount {
+    font-size: 16px;
+    min-width: 80px;
+  }
+
+  .user-info {
+    justify-content: center;
+    padding: 16px;
+    font-size: 16px;
+    width: 100%;
+  }
+
+  .user-dropdown {
+    position: static;
+    margin-top: 0;
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+    width: 100%;
+  }
+
+  .dropdown-item {
+    padding: 16px;
+    font-size: 16px;
+    text-align: center;
   }
 
   .auth-buttons {
@@ -568,29 +669,6 @@ onUnmounted(() => {
     padding: 16px;
     text-align: center;
     font-size: 16px;
-  }
-
-  .user-section {
-    width: 100%;
-  }
-
-  .user-info {
-    justify-content: center;
-    padding: 16px;
-    font-size: 16px;
-  }
-
-  .user-dropdown {
-    position: static;
-    margin-top: 16px;
-    box-shadow: none;
-    border: 1px solid #e2e8f0;
-  }
-
-  .dropdown-item {
-    padding: 16px;
-    font-size: 16px;
-    text-align: center;
   }
 }
 </style>
