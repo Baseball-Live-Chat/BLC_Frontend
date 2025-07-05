@@ -14,40 +14,32 @@
         </div>
         <div class="stat-item">
           <span class="stat-label">왼쪽팀</span>
-          <span class="stat-value">{{ leftTeamMessages.length }}개</span>
+          <span class="stat-value">{{ leftTeamCount }}개</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">오른쪽팀</span>
-          <span class="stat-value">{{ rightTeamMessages.length }}개</span>
+          <span class="stat-value">{{ rightTeamCount }}개</span>
         </div>
       </div>
     </div>
 
-    <!-- 메인 채팅 영역 (좌우 분할) -->
+    <!-- 통합 채팅 영역 -->
     <div class="chat-main">
-      <!-- 왼쪽 영역 (팀 1-5 메시지 표시) -->
-      <div class="chat-side left-side">
-        
-        <!-- 왼쪽 메시지 영역 -->
-        <div ref="leftMessages" class="messages-container left-messages">
-          <ChatMessage
-            v-for="message in leftTeamMessages"
-            :key="`left-${message.id}`"
-            :message="message"
-            :teamColor="getTeamColorByTeamId(message.teamId)"
-            :teamName="getTeamNameByTeamId(message.teamId)"
-          />
+      <div ref="chatMessages" class="unified-messages-container">
+        <div v-if="allMessages.length === 0" class="empty-messages">
+          첫 번째 메시지를 기다리고 있습니다...
         </div>
-      </div>
-
-      <!-- 오른쪽 영역 (팀 6-10 메시지 표시) -->
-      <div class="chat-side right-side">
         
-        <!-- 오른쪽 메시지 영역 -->
-        <div ref="rightMessages" class="messages-container right-messages">
+        <!-- 모든 메시지를 시간순으로 표시하되, 팀에 따라 좌우 정렬 -->
+        <div
+          v-for="message in sortedAllMessages"
+          :key="`unified-${message.id}`"
+          :class="[
+            'message-wrapper',
+            isLeftTeam(message.teamId) ? 'left-team-message' : 'right-team-message'
+          ]"
+        >
           <ChatMessage
-            v-for="message in rightTeamMessages"
-            :key="`right-${message.id}`"
             :message="message"
             :teamColor="getTeamColorByTeamId(message.teamId)"
             :teamName="getTeamNameByTeamId(message.teamId)"
@@ -177,27 +169,31 @@ const props = defineProps({
   },
 })
 
+// 반응형 변수들
 const chatStore = useChatStore()
-const leftMessages = ref(null)
-const rightMessages = ref(null)
+const chatMessages = ref(null)
 const message = ref('')
 const selectedTeam = ref(null)
 
+// Computed 속성들
 const currentRoomName = computed(() => '전체 야구 팬 채팅방')
 
-// 모든 메시지
 const allMessages = computed(() => chatStore.getAllMessages)
 
-// 팀별 메시지 분할
-const leftTeamMessages = computed(() => 
-  allMessages.value.filter(msg => leftTeams.includes(msg.teamId))
-)
+const sortedAllMessages = computed(() => {
+  // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+  return allMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+})
 
-const rightTeamMessages = computed(() => 
-  allMessages.value.filter(msg => rightTeams.includes(msg.teamId))
-)
+const leftTeamCount = computed(() => {
+  return allMessages.value.filter(msg => leftTeams.includes(msg.teamId)).length
+})
 
-// 팀 정보 헬퍼 함수들
+const rightTeamCount = computed(() => {
+  return allMessages.value.filter(msg => rightTeams.includes(msg.teamId)).length
+})
+
+// 헬퍼 함수들
 const getTeamInfoByTeamId = (teamId) => {
   return KBO_TEAMS[teamId] || { name: '알 수 없음', code: '?', color: '#666666' }
 }
@@ -218,29 +214,17 @@ const getSelectedTeamName = () => {
   return getTeamInfoByTeamId(selectedTeam.value).code
 }
 
-// 새로운 메시지가 추가될 때마다 해당 영역 스크롤을 맨 아래로
-watch(
-  leftTeamMessages,
-  async () => {
-    await nextTick()
-    if (leftMessages.value) {
-      leftMessages.value.scrollTop = leftMessages.value.scrollHeight
-    }
-  },
-  { deep: true }
-)
+const isLeftTeam = (teamId) => {
+  return leftTeams.includes(teamId)
+}
 
-watch(
-  rightTeamMessages,
-  async () => {
-    await nextTick()
-    if (rightMessages.value) {
-      rightMessages.value.scrollTop = rightMessages.value.scrollHeight
-    }
-  },
-  { deep: true }
-)
+const autoScrollToBottom = (element) => {
+  if (element) {
+    element.scrollTop = element.scrollHeight
+  }
+}
 
+// 이벤트 핸들러들
 const selectTeam = (teamId) => {
   selectedTeam.value = teamId
   chatStore.setSelectedTeam(teamId)
@@ -265,7 +249,7 @@ const sendMessage = async () => {
     })
     
     await chatStore.sendMessage(message.value.trim(), selectedTeam.value)
-    message.value = '' // 전송 후 입력창 비우기
+    message.value = ''
   } catch (error) {
     console.error('메시지 전송 실패:', error)
   }
@@ -277,10 +261,27 @@ const useQuickMessage = (quickMsg) => {
   }
 }
 
+// 워처
+watch(
+  allMessages,
+  async (newMessages, oldMessages) => {
+    console.log('전체 메시지 변경:', newMessages.length, '개')
+    if (newMessages.length > (oldMessages?.length || 0)) {
+      await nextTick()
+      autoScrollToBottom(chatMessages.value)
+    }
+  },
+  { deep: true, immediate: false }
+)
+
+// 라이프사이클
 onMounted(async () => {
   try {
     console.log('🎮 GeneralChatSection 마운트:', props.roomId)
     await chatStore.connectToGeneralChat(props.roomId)
+    
+    await nextTick()
+    autoScrollToBottom(chatMessages.value)
   } catch (error) {
     console.error('고정 채팅방 연결 실패:', error)
   }
@@ -310,6 +311,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .header-info h2 {
@@ -345,77 +347,87 @@ onUnmounted(() => {
   font-weight: bold;
 }
 
-/* 메인 채팅 영역 */
+/* 통합 채팅 영역 */
 .chat-main {
   flex: 1;
   display: flex;
-  background: #f8f9fa;
-}
-
-.chat-side {
-  flex: 1;
-  display: flex;
   flex-direction: column;
+  background: #f8f9fa;
+  min-height: 0;
 }
 
-.side-header {
-  padding: 15px;
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-bottom: 2px solid #dee2e6;
-}
-
-.side-header h3 {
-  margin: 0 0 8px 0;
-  font-size: 1.1rem;
-  color: #495057;
-}
-
-.team-badges {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.team-badge-small {
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: white;
-}
-
-.messages-container {
+.unified-messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 15px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  min-height: 0;
 }
 
-.left-messages {
-  background: #e2e2e2;
+.message-wrapper {
+  width: 100%;
+  display: flex;
 }
 
-.right-messages {
-  background: #e2e2e2;
+.left-team-message {
+  justify-content: flex-start;
 }
 
-.messages-container::-webkit-scrollbar {
-  width: 6px;
+.right-team-message {
+  justify-content: flex-end;
 }
 
-.messages-container::-webkit-scrollbar-track {
+.message-wrapper :deep(.chat-message) {
+  max-width: 70%;
+}
+
+.empty-messages {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 40px 20px;
+  font-size: 1.1rem;
+}
+
+.unified-messages-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.unified-messages-container::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
-.messages-container::-webkit-scrollbar-thumb {
+.unified-messages-container::-webkit-scrollbar-thumb {
   background: #c1c1c1;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
-/* 10개 팀 수평 배열 */
+.unified-messages-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 입력 영역 */
+.chat-input-section {
+  padding: 20px;
+  background: white;
+  border-top: 2px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.team-selection {
+  margin-bottom: 20px;
+}
+
+.selection-title {
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  color: #2c5aa0;
+  text-align: center;
+}
+
 .teams-horizontal {
   display: flex;
   gap: 8px;
@@ -463,87 +475,6 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* 입력 영역 */
-.chat-input-section {
-  padding: 20px;
-  background: white;
-  border-top: 2px solid #e9ecef;
-}
-
-.team-selection {
-  margin-bottom: 20px;
-}
-
-.selection-title {
-  margin: 0 0 15px 0;
-  font-size: 1.1rem;
-  color: #2c5aa0;
-  text-align: center;
-}
-
-.teams-container {
-  display: flex;
-  gap: 30px;
-  justify-content: center;
-}
-
-.teams-group {
-  flex: 1;
-  max-width: 300px;
-}
-
-.group-title {
-  margin: 0 0 10px 0;
-  font-size: 0.9rem;
-  color: #495057;
-  text-align: center;
-  font-weight: bold;
-}
-
-.teams-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 8px;
-}
-
-.team-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 6px;
-  border: 2px solid;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: bold;
-  transition: all 0.2s ease;
-  min-height: 60px;
-}
-
-.team-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.team-btn.active {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.team-logo {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-
-.team-name {
-  font-size: 0.7rem;
-  text-align: center;
-}
-
-/* 입력 컨테이너 */
 .input-container {
   margin-top: 15px;
 }
@@ -676,18 +607,12 @@ onUnmounted(() => {
     flex-direction: column;
   }
 
-  .chat-side {
-    height: 200px;
+  .unified-messages-container {
+    padding: 15px;
   }
 
-  .divider {
-    height: 3px;
-    width: auto;
-  }
-
-  .vs-indicator {
-    padding: 4px 8px;
-    font-size: 0.7rem;
+  .message-wrapper :deep(.chat-message) {
+    max-width: 85%;
   }
 
   .teams-horizontal {
